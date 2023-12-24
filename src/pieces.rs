@@ -29,7 +29,7 @@ fn shape_from_template(template: Vec<&str>) -> Piece {
 }
 
 fn flip_horizontaly(piece: &Piece) -> Piece {
-    let mut shape: Vec<bool> = Vec::new();
+    let mut shape: Vec<bool> = Vec::with_capacity(piece.shape.len());
 
     for r in 0..piece.height {
         for c in 0..piece.width {
@@ -42,9 +42,25 @@ fn flip_horizontaly(piece: &Piece) -> Piece {
     Piece { height: piece.height, width: piece.width, shape }
 }
 
+fn rotate_clockwise(piece: &Piece) -> Piece {
+    let mut shape: Vec<bool> = Vec::with_capacity(piece.shape.len());
+
+    for r in 0..piece.width {
+        for c in 0..piece.height {
+            let from_row = piece.height - c - 1;
+            let from_column = r;
+            let copy_index = usize::from(from_row * piece.width + from_column);
+
+            shape.push(piece.shape[copy_index]);
+        }
+    }
+
+    Piece { width: piece.height, height: piece.width, shape }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::pieces::{flip_horizontaly, shape_from_template};
+    use crate::pieces::{flip_horizontaly, rotate_clockwise, shape_from_template};
 
     #[test]
     fn can_create_shape_from_template() {
@@ -69,5 +85,19 @@ mod tests {
         assert_eq!(2, flipped.height);
         assert_eq!(3, flipped.width);
         assert_eq!(vec![false, false, true, true, true, true], flipped.shape);
+    }
+
+    #[test]
+    fn can_rotate_clockwise() {
+        let input = shape_from_template(vec![
+            "*..",
+            "***",
+        ]);
+
+        let rotated = rotate_clockwise(&input);
+
+        assert_eq!(2, rotated.width);
+        assert_eq!(3, rotated.height);
+        assert_eq!(vec![true, true, true, false, true, false], rotated.shape);
     }
 }

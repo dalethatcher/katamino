@@ -28,39 +28,41 @@ fn shape_from_template(template: Vec<&str>) -> Piece {
     Piece { height, width, shape }
 }
 
-fn flip_horizontaly(piece: &Piece) -> Piece {
-    let mut shape: Vec<bool> = Vec::with_capacity(piece.shape.len());
+impl Piece {
+    fn flip_horizontaly(&self) -> Piece {
+        let mut shape: Vec<bool> = Vec::with_capacity(self.shape.len());
 
-    for r in 0..piece.height {
-        for c in 0..piece.width {
-            let copy_index = usize::from(r * piece.width + (piece.width - c - 1));
+        for r in 0..self.height {
+            for c in 0..self.width {
+                let copy_index = usize::from(r * self.width + (self.width - c - 1));
 
-            shape.push(piece.shape[copy_index]);
+                shape.push(self.shape[copy_index]);
+            }
         }
+
+        Piece { shape, ..*self }
     }
 
-    Piece { height: piece.height, width: piece.width, shape }
-}
+    fn rotate_clockwise(&self) -> Piece {
+        let mut shape: Vec<bool> = Vec::with_capacity(self.shape.len());
 
-fn rotate_clockwise(piece: &Piece) -> Piece {
-    let mut shape: Vec<bool> = Vec::with_capacity(piece.shape.len());
+        for r in 0..self.width {
+            for c in 0..self.height {
+                let from_row = self.height - c - 1;
+                let from_column = r;
+                let copy_index = usize::from(from_row * self.width + from_column);
 
-    for r in 0..piece.width {
-        for c in 0..piece.height {
-            let from_row = piece.height - c - 1;
-            let from_column = r;
-            let copy_index = usize::from(from_row * piece.width + from_column);
-
-            shape.push(piece.shape[copy_index]);
+                shape.push(self.shape[copy_index]);
+            }
         }
-    }
 
-    Piece { width: piece.height, height: piece.width, shape }
+        Piece { height: self.width, width: self.height, shape }
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::pieces::{flip_horizontaly, rotate_clockwise, shape_from_template};
+    use crate::pieces::{shape_from_template};
 
     #[test]
     fn can_create_shape_from_template() {
@@ -80,7 +82,7 @@ mod tests {
             "***",
         ]);
 
-        let flipped = flip_horizontaly(&input);
+        let flipped = input.flip_horizontaly();
 
         assert_eq!(2, flipped.height);
         assert_eq!(3, flipped.width);
@@ -94,7 +96,7 @@ mod tests {
             "***",
         ]);
 
-        let rotated = rotate_clockwise(&input);
+        let rotated = input.rotate_clockwise();
 
         assert_eq!(2, rotated.width);
         assert_eq!(3, rotated.height);

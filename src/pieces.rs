@@ -1,11 +1,11 @@
-struct Piece {
-    height: u8,
-    width: u8,
-    shape: Vec<bool>,
+pub(crate) struct Piece {
+    pub(crate) height: u8,
+    pub(crate) width: u8,
+    pub(crate) shape: Vec<bool>,
 }
 
 
-fn shape_from_template(template: Vec<&str>) -> Piece {
+pub(crate) fn shape_from_template(template: Vec<&str>) -> Piece {
     let mut height: u8 = 0;
     let mut width: u8 = 0;
     let mut shape: Vec<bool> = Vec::new();
@@ -29,7 +29,7 @@ fn shape_from_template(template: Vec<&str>) -> Piece {
 }
 
 impl Piece {
-    fn flip_horizontaly(&self) -> Piece {
+    pub(crate) fn flip_horizontaly(&self) -> Piece {
         let mut shape: Vec<bool> = Vec::with_capacity(self.shape.len());
 
         for r in 0..self.height {
@@ -43,7 +43,7 @@ impl Piece {
         Piece { shape, ..*self }
     }
 
-    fn rotate_clockwise(&self) -> Piece {
+    pub(crate) fn rotate_clockwise(&self) -> Piece {
         let mut shape: Vec<bool> = Vec::with_capacity(self.shape.len());
 
         for r in 0..self.width {
@@ -57,6 +57,19 @@ impl Piece {
         }
 
         Piece { height: self.width, width: self.height, shape }
+    }
+
+    pub(crate) fn to_string(&self) -> String {
+        let mut result = String::new();
+
+        for i in 0..self.shape.len() {
+            if i > 0 && i % usize::from(self.width) == 0 {
+                result.push_str("\n");
+            }
+            result.push_str(if self.shape[i] { "█" } else { " " });
+        }
+
+        result
     }
 }
 
@@ -101,5 +114,15 @@ mod tests {
         assert_eq!(2, rotated.width);
         assert_eq!(3, rotated.height);
         assert_eq!(vec![true, true, true, false, true, false], rotated.shape);
+    }
+
+    #[test]
+    fn can_convert_to_string() {
+        let input = shape_from_template(vec![
+            "*..",
+            "***",
+        ]);
+
+        assert_eq!("█  \n███", input.to_string());
     }
 }

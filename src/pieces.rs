@@ -1,3 +1,7 @@
+use std::collections::HashSet;
+
+#[derive(Clone)]
+#[derive(PartialEq)]
 pub(crate) struct Piece {
     pub(crate) height: u8,
     pub(crate) width: u8,
@@ -59,7 +63,7 @@ impl Piece {
         Piece { height: self.width, width: self.height, shape }
     }
 
-    pub(crate) fn to_string(&self) -> String {
+    pub(crate) fn shape_string(&self) -> String {
         let mut result = String::new();
 
         for i in 0..self.shape.len() {
@@ -68,6 +72,47 @@ impl Piece {
             }
             result.push_str(if self.shape[i] { "█" } else { " " });
         }
+
+        result
+    }
+
+    fn shape_id(&self) -> (u32, u8, u8) {
+        let mut result: u32 = 0;
+
+        for i in (0..self.shape.len()).rev() {
+            result <<= 1;
+            if self.shape[i] {
+                result += 1;
+            }
+        }
+
+        (result, self.width, self.height)
+    }
+
+    pub(crate) fn all_transforms(&self) -> Vec<Piece> {
+        let mut result = vec![];
+        let mut existing: HashSet<(u32, u8, u8)> = HashSet::new();
+
+        let mut add_all_rotations = |piece: &Piece| {
+            let mut current = piece.clone();
+
+            for i in 0..4 {
+                if i > 0 {
+                    current = current.rotate_clockwise();
+                }
+
+                let shape_id = current.shape_id();
+                if !existing.contains(&shape_id) {
+                    existing.insert(shape_id);
+                    result.push(current.clone());
+                }
+            }
+        };
+
+        add_all_rotations(self);
+
+        let flipped = self.flip_horizontaly();
+        add_all_rotations(&flipped);
 
         result
     }
@@ -103,7 +148,7 @@ mod tests {
     }
 
     #[test]
-    fn can_rotate_clockwise() {
+    fn can_rotate_3x2_clockwise() {
         let input = shape_from_template(vec![
             "*..",
             "***",
@@ -117,12 +162,55 @@ mod tests {
     }
 
     #[test]
-    fn can_convert_to_string() {
+    fn can_rotate_2x2_clockwise() {
+        let input = shape_from_template(vec![
+            "**",
+            "*.",
+        ]);
+
+        let rotated = input.rotate_clockwise();
+        assert_eq!(2, rotated.width);
+        assert_eq!(2, rotated.height);
+        assert_eq!(vec![true, true, false, true], rotated.shape);
+    }
+
+    #[test]
+    fn can_convert_to_shape_string() {
         let input = shape_from_template(vec![
             "*..",
             "***",
         ]);
 
-        assert_eq!("█  \n███", input.to_string());
+        assert_eq!("█  \n███", input.shape_string());
+    }
+
+    #[test]
+    fn can_calculate_shape_id() {
+        let input = shape_from_template(vec![
+            "**",
+            ".*",
+            "..",
+        ]);
+
+        assert_eq!((0xb, 2, 3), input.shape_id())
+    }
+
+    #[test]
+    fn can_generate_all_transforms_for_1d() {
+        let input = shape_from_template(vec!["**"]);
+        let rotated_input = input.rotate_clockwise();
+
+        let transforms = input.all_transforms();
+        assert_eq!(2, transforms.len());
+        assert!(transforms.contains(&input));
+        assert!(transforms.contains(&rotated_input));
+    }
+
+    #[test]
+    fn can_generate_all_transforms_for_2d() {
+        let input = shape_from_template(vec!["**", "*.", "*."]);
+        let transforms = input.all_transforms();
+
+        assert_eq!(8, transforms.len());
     }
 }

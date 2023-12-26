@@ -19,14 +19,14 @@ fn print_state(board: &Board) {
     }
 }
 
-fn place_pieces(board: &mut Board, remaining: &[Vec<Piece>]) -> bool {
+fn place_pieces<'a>(board: &mut Board<'a>, remaining: &'a [Vec<Piece>]) -> bool {
     for transform in &remaining[0] {
         for column in 0..(1 + board.width - transform.width) {
             for row in 0..(1 + board.height - transform.height) {
                 let placement = Placement {
                     column,
                     row,
-                    piece: transform.clone(),
+                    piece: transform,
                 };
 
                 if board.try_add(placement) {

@@ -47,6 +47,12 @@ fn main() {
 
     if place_pieces(&mut board, shapes.as_slice()) {
         println!("found solution!");
+        for row in board.index_grid() {
+            for index in row {
+                print!("{}", index);
+            }
+            println!();
+        }
     } else {
         println!("no solution found :(");
     }

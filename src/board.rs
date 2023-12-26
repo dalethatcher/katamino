@@ -43,6 +43,24 @@ impl Board {
     pub(crate) fn remove_last(&mut self) {
         self.placements.pop();
     }
+
+    pub(crate) fn index_grid(&self) -> Vec<Vec<i8>> {
+        let mut result: Vec<Vec<i8>> = vec![vec![-1; usize::from(self.width)]; usize::from(self.height)];
+
+        for (i, placement) in self.placements.iter().enumerate() {
+            for piece_row in 0..placement.piece.height {
+                for piece_column in 0..placement.piece.width {
+                    if placement.piece.is_solid(piece_row, piece_column) {
+                        result[usize::from(placement.row + piece_row)]
+                            [usize::from(placement.column + piece_column)] =
+                            i8::try_from(i).unwrap();
+                    }
+                }
+            }
+        }
+
+        result
+    }
 }
 
 #[cfg(test)]
@@ -101,5 +119,20 @@ mod tests {
         assert!(!board.empty(0, 1));
         assert!(!board.empty(1, 0));
         assert!(board.empty(1, 1));
+    }
+
+    #[test]
+    fn generates_expected_index_grid() {
+        let board = Board {
+            width: 2,
+            height: 2,
+            placements: vec![
+                Placement { row: 0, column: 0, piece: shape_from_template(vec!["**", "*."]) },
+                Placement { row: 1, column: 1, piece: shape_from_template(vec!["*"]) },
+            ],
+        };
+        let index_grid = board.index_grid();
+
+        assert_eq!(vec![vec![0, 0], vec![0, 1]], index_grid);
     }
 }

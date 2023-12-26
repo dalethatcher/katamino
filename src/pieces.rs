@@ -116,6 +116,10 @@ impl Piece {
 
         result
     }
+
+    pub(crate) fn is_solid(&self, row: u8, column: u8) -> bool {
+        return self.shape[usize::from(row * self.width + column)];
+    }
 }
 
 #[cfg(test)]
@@ -212,5 +216,15 @@ mod tests {
         let transforms = input.all_transforms();
 
         assert_eq!(8, transforms.len());
+    }
+
+    #[test]
+    fn can_test_solidity() {
+        let input = shape_from_template(vec!["**", "*."]);
+
+        assert!(input.is_solid(0, 0));
+        assert!(input.is_solid(0, 1));
+        assert!(input.is_solid(1, 0));
+        assert!(!input.is_solid(1, 1));
     }
 }

@@ -68,7 +68,7 @@ impl Piece {
 
         for i in 0..self.shape.len() {
             if i > 0 && i % usize::from(self.width) == 0 {
-                result.push_str("\n");
+                result.push('\n');
             }
             result.push_str(if self.shape[i] { "█" } else { " " });
         }
@@ -118,7 +118,7 @@ impl Piece {
     }
 
     pub(crate) fn is_solid(&self, row: u8, column: u8) -> bool {
-        return self.shape[usize::from(row * self.width + column)];
+        self.shape[usize::from(row * self.width + column)]
     }
 }
 

@@ -40,10 +40,9 @@ impl<'a> Board<'a> {
     pub(crate) fn try_add(&mut self, placement: Placement<'a>) -> bool {
         for piece_column in 0..placement.piece.width {
             for piece_row in 0..placement.piece.height {
-                if placement.piece.is_solid(piece_row, piece_column) {
-                    if !self.empty(piece_row + placement.row, piece_column + placement.column) {
-                        return false;
-                    }
+                if placement.piece.is_solid(piece_row, piece_column) &&
+                    !self.empty(piece_row + placement.row, piece_column + placement.column) {
+                    return false;
                 }
             }
         }
@@ -52,6 +51,7 @@ impl<'a> Board<'a> {
         self.placements.push(placement.clone());
         true
     }
+
     pub(crate) fn remove_last(&mut self) {
         let removed_placement = self.placements.pop().unwrap();
 

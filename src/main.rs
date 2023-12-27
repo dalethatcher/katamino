@@ -25,9 +25,9 @@ fn place_pieces<'a>(top_level: bool, board: &mut Board<'a>, remaining: &'a [Vec<
         return false;
     }
 
-    for (i, transform) in (&remaining[0]).iter().enumerate() {
+    for (i, transform) in remaining[0].iter().enumerate() {
         if top_level {
-            println!("{}%", (i * 100) / &remaining[0].len());
+            println!("{}%", (i * 100) / remaining[0].len());
         }
         for column in 0..(1 + board.width - transform.width) {
             for row in 0..(1 + board.height - transform.height) {

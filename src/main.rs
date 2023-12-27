@@ -7,20 +7,24 @@ mod pieces;
 mod board;
 
 fn print_state(board: &Board) {
-    for row in board.index_grid() {
-        print!("|");
-        for index in row {
-            if index == -1 {
-                print!(" ");
+    for row in board.piece_id_grid() {
+        for piece_id in row {
+            if piece_id == -1 {
+                print!("\u{001b}[0m ");
             } else {
-                print!("{:x}", index);
+                print!("\u{001b}[48;5;{}m ", piece_id);
             }
         }
-        println!("|");
+        println!("\u{001b}[0m");
     }
 }
 
 fn place_pieces<'a>(top_level: bool, board: &mut Board<'a>, remaining: &'a [Vec<Piece>]) -> bool {
+    // reduces runtime to 1/4-1/8 of previous, but specific for this puzzle
+    if board.contains_isolated_single() {
+        return false;
+    }
+
     for (i, transform) in (&remaining[0]).iter().enumerate() {
         if top_level {
             println!("{}%", (i * 100) / &remaining[0].len());
@@ -49,22 +53,22 @@ fn place_pieces<'a>(top_level: bool, board: &mut Board<'a>, remaining: &'a [Vec<
 
 fn main() {
     let shapes: Vec<Vec<Piece>> = vec![
-        // shape_from_template(1, vec!["*****"]),              //  1
-        shape_from_template(2, vec!["*...", "****"]),       //  2
-        shape_from_template(3, vec![".*..", "****"]),       //  3
-        shape_from_template(4, vec!["**..", ".***"]),       //  4
-        shape_from_template(5, vec!["*..", "*..", "***"]),  //  5
-        shape_from_template(6, vec!["***", "**."]),         //  6
-        // shape_from_template(7, vec!["*.*", "***"]),         //  7
-        shape_from_template(8, vec!["*..", "***", "..*"]),  //  8
-        // shape_from_template(9, vec!["*..", "***", ".*."]),  //  9
-        shape_from_template(10, vec!["***", ".*.", ".*."]), // 10
-        shape_from_template(11, vec!["**.", ".**", "..*"]), // 11
-        // shape_from_template(12, vec![".*.", "***", ".*."]), // 12
+        shape_from_template(94, vec!["*****"]),              //  1
+        shape_from_template(208, vec!["*...", "****"]),      //  2
+        shape_from_template(130, vec![".*..", "****"]),      //  3
+        shape_from_template(127, vec!["**..", ".***"]),      //  4
+        shape_from_template(4, vec!["*..", "*..", "***"]),   //  5
+        shape_from_template(217, vec!["***", "**."]),        //  6
+        shape_from_template(11, vec!["*.*", "***"]),         //  7
+        shape_from_template(6, vec!["*..", "***", "..*"]),   //  8
+        shape_from_template(252, vec!["*..", "***", ".*."]), //  9
+        shape_from_template(28, vec!["***", ".*.", ".*."]),  // 10
+        shape_from_template(10, vec!["**.", ".**", "..*"]),  // 11
+        shape_from_template(1, vec![".*.", "***", ".*."]),   // 12
     ].iter()
         .map(Piece::all_transforms)
         .collect();
-    let mut board = create_board(8, 5);
+    let mut board = create_board(12, 5);
 
     let start = Instant::now();
     if place_pieces(true, &mut board, shapes.as_slice()) {

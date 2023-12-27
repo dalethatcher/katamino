@@ -58,22 +58,41 @@ impl<'a> Board<'a> {
         self.update_filled(&removed_placement, false);
     }
 
-    pub(crate) fn index_grid(&self) -> Vec<Vec<i8>> {
-        let mut result: Vec<Vec<i8>> = vec![vec![-1; usize::from(self.width)]; usize::from(self.height)];
+    pub(crate) fn piece_id_grid(&self) -> Vec<Vec<i32>> {
+        let mut result: Vec<Vec<i32>> = vec![vec![-1; usize::from(self.width)]; usize::from(self.height)];
 
-        for (i, placement) in self.placements.iter().enumerate() {
+        for placement in self.placements.iter() {
             for piece_row in 0..placement.piece.height {
                 for piece_column in 0..placement.piece.width {
                     if placement.piece.is_solid(piece_row, piece_column) {
                         result[usize::from(placement.row + piece_row)]
                             [usize::from(placement.column + piece_column)] =
-                            i8::try_from(i).unwrap();
+                            placement.piece.id;
                     }
                 }
             }
         }
 
         result
+    }
+
+    pub(crate) fn contains_isolated_single(&self) -> bool {
+        let u_width = usize::from(self.width);
+
+        for (i, filled) in self.filled.iter().enumerate() {
+            if !filled {
+                let filled_above = i < u_width || self.filled[i - u_width];
+                let filled_below = i >= self.filled.len() - u_width || self.filled[i + u_width];
+                let filled_left = (i % u_width) == 0 || self.filled[i - 1];
+                let filled_right = ((i + 1) % u_width) == 0 || self.filled[i + 1];
+
+                if filled_above && filled_below && filled_right && filled_left {
+                    return true;
+                }
+            }
+        }
+
+        false
     }
 }
 
@@ -138,14 +157,39 @@ mod tests {
     }
 
     #[test]
-    fn generates_expected_index_grid() {
-        let first_piece = shape_from_template(1, vec!["**", "*."]);
-        let second_piece = shape_from_template(2, vec!["*"]);
+    fn generates_expected_shape_id_grid() {
+        let first_piece = shape_from_template(100, vec!["**", "*."]);
+        let second_piece = shape_from_template(200, vec!["*"]);
         let mut board = create_board(2, 2);
         board.try_add(Placement { row: 0, column: 0, piece: &first_piece });
         board.try_add(Placement { row: 1, column: 1, piece: &second_piece });
-        let index_grid = board.index_grid();
+        let shape_id_grid = board.piece_id_grid();
 
-        assert_eq!(vec![vec![0, 0], vec![0, 1]], index_grid);
+        assert_eq!(vec![vec![100, 100], vec![100, 200]], shape_id_grid);
+    }
+
+    macro_rules! isolated_test {
+        ($($name:ident: $value:expr,)*) => {
+        $(
+            #[test]
+            fn $name() {
+                let (width, height, template, expected) = $value;
+                let piece = shape_from_template(1, template);
+                let mut board = create_board(width, height);
+                board.try_add(Placement{row: 0, column: 0, piece: &piece});
+
+                assert_eq!(expected, board.contains_isolated_single());
+            }
+        )*
+        }
+    }
+
+    isolated_test! {
+        isolated_top_left: (2, 2, vec![".*", "**"], true),
+        isolated_top_right: (2, 2, vec!["*.", "**"], true),
+        isolated_bottom_right: (2, 2, vec!["**", "*."], true),
+        isolated_bottom_left: (2, 2, vec!["**", ".*"], true),
+        isolated_centre: (3, 3, vec!["***", "*.*", "***"], true),
+        non_isolated: (2, 2, vec!["*"], false),
     }
 }

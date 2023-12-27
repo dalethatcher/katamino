@@ -9,7 +9,6 @@ pub(crate) struct Piece {
     pub(crate) shape: Vec<bool>,
 }
 
-
 pub(crate) fn shape_from_template(id: i32, template: Vec<&str>) -> Piece {
     let mut height: u8 = 0;
     let mut width: u8 = 0;

@@ -1,0 +1,2 @@
+# katamino
+Finding Katamino solutions

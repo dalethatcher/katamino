@@ -1,5 +1,6 @@
 use std::time::Instant;
-use crate::board::{Board, Placement};
+
+use crate::board::{Board, create_board, Placement};
 use crate::pieces::{Piece, shape_from_template};
 
 mod pieces;
@@ -63,11 +64,7 @@ fn main() {
     ].iter()
         .map(Piece::all_transforms)
         .collect();
-    let mut board = Board {
-        width: 8,
-        height: 5,
-        placements: vec![],
-    };
+    let mut board = create_board(8, 5);
 
     let start = Instant::now();
     if place_pieces(true, &mut board, shapes.as_slice()) {
@@ -82,7 +79,7 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use crate::{place_pieces, print_state};
-    use crate::board::Board;
+    use crate::board::create_board;
     use crate::pieces::{Piece, shape_from_template};
 
     #[test]
@@ -92,7 +89,7 @@ mod tests {
             shape_from_template(2, vec!["*.*", "***"]),
             shape_from_template(3, vec![".*.", "***", ".*."]),
         ].iter().map(Piece::all_transforms).collect();
-        let mut board = Board { width: 5, height: 3, placements: vec![] };
+        let mut board = create_board(5, 3);
 
         assert!(place_pieces(true, &mut board, pieces.as_slice()));
         print_state(&board);

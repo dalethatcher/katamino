@@ -70,7 +70,7 @@ mod tests {
 
     #[test]
     fn can_add_to_empty_board() {
-        let piece = shape_from_template(vec!["*"]);
+        let piece = shape_from_template(1, vec!["*"]);
         let placement = Placement { row: 0, column: 0, piece: &piece };
         let mut board = Board { width: 1, height: 1, placements: vec![] };
 
@@ -79,8 +79,8 @@ mod tests {
 
     #[test]
     fn cannot_add_to_full_board() {
-        let first_piece = shape_from_template(vec!["**"]);
-        let second_piece = shape_from_template(vec!["*"]);
+        let first_piece = shape_from_template(1, vec!["**"]);
+        let second_piece = shape_from_template(2, vec!["*"]);
         let mut board = Board { width: 2, height: 1, placements: vec![Placement { row: 0, column: 0, piece: &first_piece }] };
 
         assert!(!board.try_add(Placement { row: 0, column: 1, piece: &second_piece }));
@@ -88,8 +88,8 @@ mod tests {
 
     #[test]
     fn can_add_after_removing() {
-        let first_piece = shape_from_template(vec!["**"]);
-        let second_piece = shape_from_template(vec!["*"]);
+        let first_piece = shape_from_template(1, vec!["**"]);
+        let second_piece = shape_from_template(2, vec!["*"]);
 
         let mut board = Board { width: 2, height: 1, placements: vec![Placement { row: 0, column: 0, piece: &first_piece }] };
         board.remove_last();
@@ -99,7 +99,7 @@ mod tests {
 
     #[test]
     fn can_test_for_empty_out_of_bounds() {
-        let piece = shape_from_template(vec!["*"]);
+        let piece = shape_from_template(1, vec!["*"]);
         let placement = Placement { row: 0, column: 0, piece: &piece };
         let board = Board { width: 2, height: 2, placements: vec![placement] };
 
@@ -111,7 +111,7 @@ mod tests {
 
     #[test]
     fn can_test_for_empty_inside_bounds() {
-        let piece = shape_from_template(vec!["**", "*."]);
+        let piece = shape_from_template(1, vec!["**", "*."]);
         let placement = Placement { row: 0, column: 0, piece: &piece };
         let board = Board { width: 2, height: 2, placements: vec![placement] };
 
@@ -123,8 +123,8 @@ mod tests {
 
     #[test]
     fn generates_expected_index_grid() {
-        let first_piece = shape_from_template(vec!["**", "*."]);
-        let second_piece = shape_from_template(vec!["*"]);
+        let first_piece = shape_from_template(1, vec!["**", "*."]);
+        let second_piece = shape_from_template(2, vec!["*"]);
         let board = Board {
             width: 2,
             height: 2,

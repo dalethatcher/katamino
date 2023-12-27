@@ -3,13 +3,14 @@ use std::collections::HashSet;
 #[derive(Clone)]
 #[derive(PartialEq)]
 pub(crate) struct Piece {
+    pub(crate) id: i32,
     pub(crate) height: u8,
     pub(crate) width: u8,
     pub(crate) shape: Vec<bool>,
 }
 
 
-pub(crate) fn shape_from_template(template: Vec<&str>) -> Piece {
+pub(crate) fn shape_from_template(id: i32, template: Vec<&str>) -> Piece {
     let mut height: u8 = 0;
     let mut width: u8 = 0;
     let mut shape: Vec<bool> = Vec::new();
@@ -29,7 +30,7 @@ pub(crate) fn shape_from_template(template: Vec<&str>) -> Piece {
         }
     }
 
-    Piece { height, width, shape }
+    Piece { id, height, width, shape }
 }
 
 impl Piece {
@@ -60,7 +61,7 @@ impl Piece {
             }
         }
 
-        Piece { height: self.width, width: self.height, shape }
+        Piece { height: self.width, width: self.height, shape, ..*self }
     }
 
     pub(crate) fn shape_string(&self) -> String {
@@ -128,7 +129,7 @@ mod tests {
 
     #[test]
     fn can_create_shape_from_template() {
-        let piece = shape_from_template(vec![
+        let piece = shape_from_template(123, vec![
             "*.*",
             "***"]);
 
@@ -139,13 +140,14 @@ mod tests {
 
     #[test]
     fn can_flip_piece_horizontally() {
-        let input = shape_from_template(vec![
+        let input = shape_from_template(123, vec![
             "*..",
             "***",
         ]);
 
         let flipped = input.flip_horizontaly();
 
+        assert_eq!(123, flipped.id);
         assert_eq!(2, flipped.height);
         assert_eq!(3, flipped.width);
         assert_eq!(vec![false, false, true, true, true, true], flipped.shape);
@@ -153,13 +155,14 @@ mod tests {
 
     #[test]
     fn can_rotate_3x2_clockwise() {
-        let input = shape_from_template(vec![
+        let input = shape_from_template(123, vec![
             "*..",
             "***",
         ]);
 
         let rotated = input.rotate_clockwise();
 
+        assert_eq!(123, rotated.id);
         assert_eq!(2, rotated.width);
         assert_eq!(3, rotated.height);
         assert_eq!(vec![true, true, true, false, true, false], rotated.shape);
@@ -167,12 +170,13 @@ mod tests {
 
     #[test]
     fn can_rotate_2x2_clockwise() {
-        let input = shape_from_template(vec![
+        let input = shape_from_template(123, vec![
             "**",
             "*.",
         ]);
 
         let rotated = input.rotate_clockwise();
+        assert_eq!(123, rotated.id);
         assert_eq!(2, rotated.width);
         assert_eq!(2, rotated.height);
         assert_eq!(vec![true, true, false, true], rotated.shape);
@@ -180,7 +184,7 @@ mod tests {
 
     #[test]
     fn can_convert_to_shape_string() {
-        let input = shape_from_template(vec![
+        let input = shape_from_template(123, vec![
             "*..",
             "***",
         ]);
@@ -190,7 +194,7 @@ mod tests {
 
     #[test]
     fn can_calculate_shape_id() {
-        let input = shape_from_template(vec![
+        let input = shape_from_template(123, vec![
             "**",
             ".*",
             "..",
@@ -201,7 +205,7 @@ mod tests {
 
     #[test]
     fn can_generate_all_transforms_for_1d() {
-        let input = shape_from_template(vec!["**"]);
+        let input = shape_from_template(123, vec!["**"]);
         let rotated_input = input.rotate_clockwise();
 
         let transforms = input.all_transforms();
@@ -212,7 +216,7 @@ mod tests {
 
     #[test]
     fn can_generate_all_transforms_for_2d() {
-        let input = shape_from_template(vec!["**", "*.", "*."]);
+        let input = shape_from_template(123, vec!["**", "*.", "*."]);
         let transforms = input.all_transforms();
 
         assert_eq!(8, transforms.len());
@@ -220,7 +224,7 @@ mod tests {
 
     #[test]
     fn can_test_solidity() {
-        let input = shape_from_template(vec!["**", "*."]);
+        let input = shape_from_template(123, vec!["**", "*."]);
 
         assert!(input.is_solid(0, 0));
         assert!(input.is_solid(0, 1));

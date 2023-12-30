@@ -31,8 +31,9 @@ impl<'a> Board<'a> {
         for piece_column in 0..placement.piece.width {
             for piece_row in 0..placement.piece.height {
                 if placement.piece.is_solid(piece_row, piece_column) {
-                    self.filled[usize::from((piece_row + placement.row) * self.width +
-                        piece_column + placement.column)] = new_value;
+                    self.filled[usize::from(
+                        (piece_row + placement.row) * self.width + piece_column + placement.column,
+                    )] = new_value;
                 }
             }
         }
@@ -40,8 +41,9 @@ impl<'a> Board<'a> {
     pub(crate) fn try_add(&mut self, placement: Placement<'a>) -> bool {
         for piece_column in 0..placement.piece.width {
             for piece_row in 0..placement.piece.height {
-                if placement.piece.is_solid(piece_row, piece_column) &&
-                    !self.empty(piece_row + placement.row, piece_column + placement.column) {
+                if placement.piece.is_solid(piece_row, piece_column)
+                    && !self.empty(piece_row + placement.row, piece_column + placement.column)
+                {
                     return false;
                 }
             }
@@ -59,15 +61,15 @@ impl<'a> Board<'a> {
     }
 
     pub(crate) fn piece_id_grid(&self) -> Vec<Vec<i32>> {
-        let mut result: Vec<Vec<i32>> = vec![vec![-1; usize::from(self.width)]; usize::from(self.height)];
+        let mut result: Vec<Vec<i32>> =
+            vec![vec![-1; usize::from(self.width)]; usize::from(self.height)];
 
         for placement in self.placements.iter() {
             for piece_row in 0..placement.piece.height {
                 for piece_column in 0..placement.piece.width {
                     if placement.piece.is_solid(piece_row, piece_column) {
                         result[usize::from(placement.row + piece_row)]
-                            [usize::from(placement.column + piece_column)] =
-                            placement.piece.id;
+                            [usize::from(placement.column + piece_column)] = placement.piece.id;
                     }
                 }
             }
@@ -95,11 +97,10 @@ impl<'a> Board<'a> {
         false
     }
 
-    pub(crate) fn number_of_possibilities(&self, transforms: &Vec<Piece>) -> u32 {
-        transforms.iter()
-            .map(|p| {
-                ((1 + self.width - p.width) * (1 + self.height - p.height)) as u32
-            })
+    pub(crate) fn number_of_possibilities(&self, transforms: &[Piece]) -> u32 {
+        transforms
+            .iter()
+            .map(|p| ((1 + self.width - p.width) * (1 + self.height - p.height)) as u32)
             .sum()
     }
 }
@@ -112,7 +113,11 @@ mod tests {
     #[test]
     fn can_add_to_empty_board() {
         let piece = shape_from_template(1, vec!["*"]);
-        let placement = Placement { row: 0, column: 0, piece: &piece };
+        let placement = Placement {
+            row: 0,
+            column: 0,
+            piece: &piece,
+        };
         let mut board = create_board(1, 1);
 
         assert!(board.try_add(placement));
@@ -123,9 +128,17 @@ mod tests {
         let first_piece = shape_from_template(1, vec!["**"]);
         let second_piece = shape_from_template(2, vec!["*"]);
         let mut board = create_board(2, 1);
-        board.try_add(Placement { row: 0, column: 0, piece: &first_piece });
+        board.try_add(Placement {
+            row: 0,
+            column: 0,
+            piece: &first_piece,
+        });
 
-        assert!(!board.try_add(Placement { row: 0, column: 1, piece: &second_piece }));
+        assert!(!board.try_add(Placement {
+            row: 0,
+            column: 1,
+            piece: &second_piece
+        }));
     }
 
     #[test]
@@ -134,17 +147,29 @@ mod tests {
         let second_piece = shape_from_template(2, vec!["*"]);
 
         let mut board = create_board(2, 1);
-        board.try_add(Placement { row: 0, column: 0, piece: &first_piece });
+        board.try_add(Placement {
+            row: 0,
+            column: 0,
+            piece: &first_piece,
+        });
         board.remove_last();
 
-        assert!(board.try_add(Placement { row: 0, column: 1, piece: &second_piece }));
+        assert!(board.try_add(Placement {
+            row: 0,
+            column: 1,
+            piece: &second_piece
+        }));
     }
 
     #[test]
     fn can_test_for_empty_out_of_bounds() {
         let piece = shape_from_template(1, vec!["*"]);
         let mut board = create_board(2, 2);
-        board.try_add(Placement { row: 0, column: 0, piece: &piece });
+        board.try_add(Placement {
+            row: 0,
+            column: 0,
+            piece: &piece,
+        });
 
         assert!(!board.empty(0, 0));
         assert!(board.empty(0, 1));
@@ -156,7 +181,11 @@ mod tests {
     fn can_test_for_empty_inside_bounds() {
         let piece = shape_from_template(1, vec!["**", "*."]);
         let mut board = create_board(2, 2);
-        board.try_add(Placement { row: 0, column: 0, piece: &piece });
+        board.try_add(Placement {
+            row: 0,
+            column: 0,
+            piece: &piece,
+        });
 
         assert!(!board.empty(0, 0));
         assert!(!board.empty(0, 1));
@@ -169,8 +198,16 @@ mod tests {
         let first_piece = shape_from_template(100, vec!["**", "*."]);
         let second_piece = shape_from_template(200, vec!["*"]);
         let mut board = create_board(2, 2);
-        board.try_add(Placement { row: 0, column: 0, piece: &first_piece });
-        board.try_add(Placement { row: 1, column: 1, piece: &second_piece });
+        board.try_add(Placement {
+            row: 0,
+            column: 0,
+            piece: &first_piece,
+        });
+        board.try_add(Placement {
+            row: 1,
+            column: 1,
+            piece: &second_piece,
+        });
         let shape_id_grid = board.piece_id_grid();
 
         assert_eq!(vec![vec![100, 100], vec![100, 200]], shape_id_grid);

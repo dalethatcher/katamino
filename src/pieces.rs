@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
-#[derive(Clone)]
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 pub(crate) struct Piece {
     pub(crate) id: i32,
     pub(crate) height: u8,
@@ -21,7 +20,10 @@ pub(crate) fn shape_from_template(id: i32, template: Vec<&str>) -> Piece {
         if width == 0 {
             width = current_width;
         } else if current_width != width {
-            panic!("on line {} got width {} but expected {}", height, current_width, width)
+            panic!(
+                "on line {} got width {} but expected {}",
+                height, current_width, width
+            )
         }
 
         for c in line.chars() {
@@ -29,7 +31,12 @@ pub(crate) fn shape_from_template(id: i32, template: Vec<&str>) -> Piece {
         }
     }
 
-    Piece { id, height, width, shape }
+    Piece {
+        id,
+        height,
+        width,
+        shape,
+    }
 }
 
 impl Piece {
@@ -60,7 +67,12 @@ impl Piece {
             }
         }
 
-        Piece { height: self.width, width: self.height, shape, ..*self }
+        Piece {
+            height: self.width,
+            width: self.height,
+            shape,
+            ..*self
+        }
     }
 
     pub(crate) fn shape_string(&self) -> String {
@@ -124,13 +136,11 @@ impl Piece {
 
 #[cfg(test)]
 mod tests {
-    use crate::pieces::{shape_from_template};
+    use crate::pieces::shape_from_template;
 
     #[test]
     fn can_create_shape_from_template() {
-        let piece = shape_from_template(123, vec![
-            "*.*",
-            "***"]);
+        let piece = shape_from_template(123, vec!["*.*", "***"]);
 
         assert_eq!(2, piece.height);
         assert_eq!(3, piece.width);
@@ -139,10 +149,7 @@ mod tests {
 
     #[test]
     fn can_flip_piece_horizontally() {
-        let input = shape_from_template(123, vec![
-            "*..",
-            "***",
-        ]);
+        let input = shape_from_template(123, vec!["*..", "***"]);
 
         let flipped = input.flip_horizontaly();
 
@@ -154,10 +161,7 @@ mod tests {
 
     #[test]
     fn can_rotate_3x2_clockwise() {
-        let input = shape_from_template(123, vec![
-            "*..",
-            "***",
-        ]);
+        let input = shape_from_template(123, vec!["*..", "***"]);
 
         let rotated = input.rotate_clockwise();
 
@@ -169,10 +173,7 @@ mod tests {
 
     #[test]
     fn can_rotate_2x2_clockwise() {
-        let input = shape_from_template(123, vec![
-            "**",
-            "*.",
-        ]);
+        let input = shape_from_template(123, vec!["**", "*."]);
 
         let rotated = input.rotate_clockwise();
         assert_eq!(123, rotated.id);
@@ -183,21 +184,14 @@ mod tests {
 
     #[test]
     fn can_convert_to_shape_string() {
-        let input = shape_from_template(123, vec![
-            "*..",
-            "***",
-        ]);
+        let input = shape_from_template(123, vec!["*..", "***"]);
 
         assert_eq!("█  \n███", input.shape_string());
     }
 
     #[test]
     fn can_calculate_shape_id() {
-        let input = shape_from_template(123, vec![
-            "**",
-            ".*",
-            "..",
-        ]);
+        let input = shape_from_template(123, vec!["**", ".*", ".."]);
 
         assert_eq!((0xb, 2, 3), input.shape_id())
     }

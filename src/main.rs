@@ -1,11 +1,11 @@
 use std::cell::RefCell;
 use std::time::Instant;
 
-use crate::board::{Board, create_board, Placement};
-use crate::pieces::{Piece, shape_from_template};
+use crate::board::{create_board, Board, Placement};
+use crate::pieces::{shape_from_template, Piece};
 
-mod pieces;
 mod board;
+mod pieces;
 
 fn print_state(board: &Board) {
     for row in board.piece_id_grid() {
@@ -79,9 +79,10 @@ fn main() {
         shape_from_template(28, vec!["***", ".*.", ".*."]),  // 10
         shape_from_template(10, vec!["**.", ".**", "..*"]),  // 11
         shape_from_template(1, vec![".*.", "***", ".*."]),   // 12
-    ].iter()
-        .map(Piece::all_transforms)
-        .collect();
+    ]
+    .iter()
+    .map(Piece::all_transforms)
+    .collect();
     let mut board = create_board(12, 5);
 
     let start = Instant::now();
@@ -96,9 +97,9 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use crate::{place_pieces, print_state};
     use crate::board::create_board;
-    use crate::pieces::{Piece, shape_from_template};
+    use crate::pieces::{shape_from_template, Piece};
+    use crate::{place_pieces, print_state};
 
     #[test]
     fn can_place_pieces() {
@@ -106,7 +107,10 @@ mod tests {
             shape_from_template(1, vec!["*.*", "***"]),
             shape_from_template(2, vec!["*.*", "***"]),
             shape_from_template(3, vec![".*.", "***", ".*."]),
-        ].iter().map(Piece::all_transforms).collect();
+        ]
+        .iter()
+        .map(Piece::all_transforms)
+        .collect();
         let mut board = create_board(5, 3);
 
         assert!(place_pieces(true, &mut board, pieces.as_slice()));

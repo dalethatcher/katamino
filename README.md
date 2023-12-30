@@ -1,2 +1,2 @@
 # katamino
-Finding Katamino solutions
+Finding Katamino (pentomino) solutions

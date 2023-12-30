@@ -94,6 +94,14 @@ impl<'a> Board<'a> {
 
         false
     }
+
+    pub(crate) fn number_of_possibilities(&self, transforms: &Vec<Piece>) -> u32 {
+        transforms.iter()
+            .map(|p| {
+                ((1 + self.width - p.width) * (1 + self.height - p.height)) as u32
+            })
+            .sum()
+    }
 }
 
 #[cfg(test)]
@@ -191,5 +199,14 @@ mod tests {
         isolated_bottom_left: (2, 2, vec!["**", ".*"], true),
         isolated_centre: (3, 3, vec!["***", "*.*", "***"], true),
         non_isolated: (2, 2, vec!["*"], false),
+    }
+
+    #[test]
+    fn can_calculate_the_number_of_transforms() {
+        let piece = shape_from_template(0, vec!["*****"]);
+        let transforms = piece.all_transforms();
+        let board = create_board(12, 5);
+
+        assert_eq!(52, board.number_of_possibilities(&transforms))
     }
 }

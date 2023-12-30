@@ -1,3 +1,4 @@
+use std::cell::RefCell;
 use std::time::Instant;
 
 use crate::board::{Board, create_board, Placement};
@@ -25,12 +26,25 @@ fn place_pieces<'a>(top_level: bool, board: &mut Board<'a>, remaining: &'a [Vec<
         return false;
     }
 
-    for (i, transform) in remaining[0].iter().enumerate() {
-        if top_level {
-            println!("{}%", (i * 100) / remaining[0].len());
-        }
+    let tracker = if !top_level {
+        None
+    } else {
+        let number_of_possibilities = board.number_of_possibilities(&remaining[0]) as i32;
+        let mut progress = -1i32;
+
+        Some(RefCell::new(move || {
+            progress += 1;
+            println!("{}%", (progress * 100) / number_of_possibilities);
+        }))
+    };
+
+    for transform in remaining[0].iter() {
         for column in 0..(1 + board.width - transform.width) {
             for row in 0..(1 + board.height - transform.height) {
+                for v in tracker.iter() {
+                    v.borrow_mut()();
+                }
+
                 let placement = Placement {
                     column,
                     row,

@@ -7,6 +7,7 @@ pub(crate) struct Placement<'a> {
     pub(crate) piece: &'a Piece,
 }
 
+#[derive(Clone)]
 pub(crate) struct Board<'a> {
     pub(crate) width: u8,
     pub(crate) height: u8,

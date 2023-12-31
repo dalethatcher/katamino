@@ -20,7 +20,11 @@ fn print_state(board: &Board) {
     }
 }
 
-fn place_pieces<'a>(top_level: bool, board: &mut Board<'a>, remaining: &'a [Vec<Piece>]) -> bool {
+fn find_solutions<'a>(
+    top_level: bool,
+    board: &mut Board<'a>,
+    remaining: &'a [Vec<Piece>],
+) -> Vec<Board<'a>> {
     // reduces runtime to 1/4-1/8 of previous, but specific for this puzzle
     if !board.empty_spaces_multiple_of_five() {
         #[cfg(feature = "trace")]
@@ -28,7 +32,7 @@ fn place_pieces<'a>(top_level: bool, board: &mut Board<'a>, remaining: &'a [Vec<
             println!("Pruning impossible path:");
             print_state(board);
         }
-        return false;
+        return vec![];
     }
 
     let tracker = if !top_level {
@@ -43,6 +47,7 @@ fn place_pieces<'a>(top_level: bool, board: &mut Board<'a>, remaining: &'a [Vec<
         }))
     };
 
+    let mut solutions = vec![];
     for transform in remaining[0].iter() {
         for column in 0..(1 + board.width - transform.width) {
             for row in 0..(1 + board.height - transform.height) {
@@ -57,17 +62,21 @@ fn place_pieces<'a>(top_level: bool, board: &mut Board<'a>, remaining: &'a [Vec<
                 };
 
                 if board.try_add(placement) {
-                    if remaining.len() == 1 || place_pieces(false, board, &remaining[1..]) {
-                        return true;
+                    if remaining.len() == 1 {
+                        println!("Found solution:");
+                        print_state(board);
+                        solutions.push(board.clone());
                     } else {
-                        board.remove_last();
+                        let mut child_solutions = find_solutions(false, board, &remaining[1..]);
+                        solutions.append(&mut child_solutions);
                     }
+                    board.remove_last();
                 }
             }
         }
     }
 
-    false
+    solutions
 }
 
 fn main() {
@@ -98,20 +107,22 @@ fn main() {
     let mut board = create_board(12, 5);
 
     let start = Instant::now();
-    if place_pieces(true, &mut board, transforms.as_slice()) {
-        let elapsed = start.elapsed();
-        println!("found solution in {}ms!", elapsed.as_millis());
-        print_state(&board);
-    } else {
+    let solutions = find_solutions(true, &mut board, transforms.as_slice());
+
+    if solutions.is_empty() {
         println!("no solution found :(");
+    } else {
+        let elapsed = start.elapsed();
+        println!("found all solutions in {}ms!", elapsed.as_millis());
+        print_state(&board);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::board::create_board;
+    use crate::find_solutions;
     use crate::pieces::{shape_from_template, Piece};
-    use crate::{place_pieces, print_state};
 
     #[test]
     fn can_place_pieces() {
@@ -125,8 +136,7 @@ mod tests {
         .collect();
         let mut board = create_board(5, 3);
 
-        assert!(place_pieces(true, &mut board, pieces.as_slice()));
-        print_state(&board);
-        assert!(true)
+        let solutions = find_solutions(true, &mut board, pieces.as_slice());
+        assert_eq!(2, solutions.len());
     }
 }

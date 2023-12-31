@@ -22,7 +22,12 @@ fn print_state(board: &Board) {
 
 fn place_pieces<'a>(top_level: bool, board: &mut Board<'a>, remaining: &'a [Vec<Piece>]) -> bool {
     // reduces runtime to 1/4-1/8 of previous, but specific for this puzzle
-    if board.contains_isolated_single() {
+    if !board.empty_spaces_multiple_of_five() {
+        #[cfg(feature = "trace")]
+        {
+            println!("Pruning impossible path:");
+            print_state(board);
+        }
         return false;
     }
 
@@ -66,7 +71,7 @@ fn place_pieces<'a>(top_level: bool, board: &mut Board<'a>, remaining: &'a [Vec<
 }
 
 fn main() {
-    let shapes: Vec<Vec<Piece>> = vec![
+    let pieces = vec![
         shape_from_template(94, vec!["*****"]),              //  1
         shape_from_template(208, vec!["*...", "****"]),      //  2
         shape_from_template(130, vec![".*..", "****"]),      //  3
@@ -79,14 +84,21 @@ fn main() {
         shape_from_template(28, vec!["***", ".*.", ".*."]),  // 10
         shape_from_template(10, vec!["**.", ".**", "..*"]),  // 11
         shape_from_template(1, vec![".*.", "***", ".*."]),   // 12
-    ]
-    .iter()
-    .map(Piece::all_transforms)
-    .collect();
+    ];
+
+    #[cfg(feature = "trace")]
+    {
+        for piece in pieces.iter() {
+            println!("piece {}:", piece.id);
+            println!("{}", piece.shape_string());
+        }
+    }
+
+    let transforms: Vec<Vec<Piece>> = pieces.iter().map(Piece::all_transforms).collect();
     let mut board = create_board(12, 5);
 
     let start = Instant::now();
-    if place_pieces(true, &mut board, shapes.as_slice()) {
+    if place_pieces(true, &mut board, transforms.as_slice()) {
         let elapsed = start.elapsed();
         println!("found solution in {}ms!", elapsed.as_millis());
         print_state(&board);

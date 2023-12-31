@@ -39,8 +39,8 @@ impl<'a> Board<'a> {
         }
     }
     pub(crate) fn try_add(&mut self, placement: Placement<'a>) -> bool {
-        for piece_column in 0..placement.piece.width {
-            for piece_row in 0..placement.piece.height {
+        for piece_row in 0..placement.piece.height {
+            for piece_column in 0..placement.piece.width {
                 if placement.piece.is_solid(piece_row, piece_column)
                     && !self.empty(piece_row + placement.row, piece_column + placement.column)
                 {
@@ -78,30 +78,56 @@ impl<'a> Board<'a> {
         result
     }
 
-    pub(crate) fn contains_isolated_single(&self) -> bool {
-        let u_width = usize::from(self.width);
-
-        for (i, filled) in self.filled.iter().enumerate() {
-            if !filled {
-                let filled_above = i < u_width || self.filled[i - u_width];
-                let filled_below = i >= self.filled.len() - u_width || self.filled[i + u_width];
-                let filled_left = (i % u_width) == 0 || self.filled[i - 1];
-                let filled_right = ((i + 1) % u_width) == 0 || self.filled[i + 1];
-
-                if filled_above && filled_below && filled_right && filled_left {
-                    return true;
-                }
-            }
-        }
-
-        false
-    }
-
     pub(crate) fn number_of_possibilities(&self, transforms: &[Piece]) -> u32 {
         transforms
             .iter()
             .map(|p| ((1 + self.width - p.width) * (1 + self.height - p.height)) as u32)
             .sum()
+    }
+
+    fn count_from(&self, visited: &mut [bool], row: u8, column: u8) -> u32 {
+        let index = (row * self.width + column) as usize;
+        if visited[index] || self.filled[index] {
+            return 0;
+        }
+
+        let mut result = 1;
+        visited[index] = true;
+
+        if row > 0 {
+            result += self.count_from(visited, row - 1, column);
+        }
+        if row < self.height - 1 {
+            result += self.count_from(visited, row + 1, column);
+        }
+        if column > 0 {
+            result += self.count_from(visited, row, column - 1);
+        }
+        if column < self.width - 1 {
+            result += self.count_from(visited, row, column + 1);
+        }
+
+        result
+    }
+
+    pub(crate) fn empty_spaces_multiple_of_five(&self) -> bool {
+        let mut visited = vec![false; self.width as usize * self.height as usize];
+
+        for (i, filled) in self.filled.iter().enumerate() {
+            if !filled
+                && !visited[i]
+                && self.count_from(
+                    visited.as_mut_slice(),
+                    i as u8 / self.width,
+                    i as u8 % self.width,
+                ) % 5
+                    != 0
+            {
+                return false;
+            }
+        }
+
+        true
     }
 }
 
@@ -213,31 +239,6 @@ mod tests {
         assert_eq!(vec![vec![100, 100], vec![100, 200]], shape_id_grid);
     }
 
-    macro_rules! isolated_test {
-        ($($name:ident: $value:expr,)*) => {
-        $(
-            #[test]
-            fn $name() {
-                let (width, height, template, expected) = $value;
-                let piece = shape_from_template(1, template);
-                let mut board = create_board(width, height);
-                board.try_add(Placement{row: 0, column: 0, piece: &piece});
-
-                assert_eq!(expected, board.contains_isolated_single());
-            }
-        )*
-        }
-    }
-
-    isolated_test! {
-        isolated_top_left: (2, 2, vec![".*", "**"], true),
-        isolated_top_right: (2, 2, vec!["*.", "**"], true),
-        isolated_bottom_right: (2, 2, vec!["**", "*."], true),
-        isolated_bottom_left: (2, 2, vec!["**", ".*"], true),
-        isolated_centre: (3, 3, vec!["***", "*.*", "***"], true),
-        non_isolated: (2, 2, vec!["*"], false),
-    }
-
     #[test]
     fn can_calculate_the_number_of_transforms() {
         let piece = shape_from_template(0, vec!["*****"]);
@@ -245,5 +246,72 @@ mod tests {
         let board = create_board(12, 5);
 
         assert_eq!(52, board.number_of_possibilities(&transforms))
+    }
+
+    #[test]
+    fn can_check_empty_space_is_multiple_of_five() {
+        let piece = shape_from_template(0, vec!["*****"]);
+        let mut board = create_board(12, 5);
+        board.try_add(Placement {
+            row: 0,
+            column: 0,
+            piece: &piece,
+        });
+
+        assert!(board.empty_spaces_multiple_of_five());
+    }
+
+    #[test]
+    fn calculates_empty_space_correctly_for_known_good_solution() {
+        let pieces = vec![
+            shape_from_template(94, vec!["*****"]),              //  1
+            shape_from_template(208, vec!["*...", "****"]),      //  2
+            shape_from_template(130, vec![".*..", "****"]),      //  3
+            shape_from_template(127, vec!["**..", ".***"]),      //  4
+            shape_from_template(4, vec!["***", "..*", "..*"]),   //  5
+            shape_from_template(217, vec!["***", "**."]),        //  6
+            shape_from_template(11, vec!["***", "*.*"]),         //  7
+            shape_from_template(6, vec!["**.", ".*.", ".**"]),   //  8
+            shape_from_template(252, vec![".*.", "**.", ".**"]), //  9
+            shape_from_template(28, vec!["*..", "***", "*.."]),  // 10
+            shape_from_template(10, vec!["..*", ".**", "**."]),  // 11
+            shape_from_template(1, vec![".*.", "***", ".*."]),   // 12
+        ];
+        let placements: Vec<Placement> = vec![
+            (0, 0), //  1
+            (3, 0), //  2
+            (3, 5), //  3
+            (3, 8), //  4
+            (0, 9), //  5
+            (1, 0), //  6
+            (0, 6), //  7
+            (1, 9), //  8
+            (0, 4), //  9
+            (1, 7), // 10
+            (1, 1), // 11
+            (2, 3), // 12
+        ]
+        .iter()
+        .zip(pieces.iter())
+        .map(|((r, c), piece)| Placement {
+            row: *r,
+            column: *c,
+            piece: piece,
+        })
+        .collect();
+
+        let mut board = create_board(12, 5);
+        for (i, placement) in placements.iter().enumerate() {
+            assert!(
+                board.try_add(placement.clone()),
+                "failed to add piece index {}",
+                i
+            );
+            assert!(
+                board.empty_spaces_multiple_of_five(),
+                "expected valid empty space when adding piece index {}",
+                i
+            );
+        }
     }
 }

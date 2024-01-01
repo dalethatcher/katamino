@@ -34,7 +34,7 @@ fn main() {
     let mut board = create_board(12, 5);
 
     let start = Instant::now();
-    let solutions = board.find_solutions(true, transforms.as_slice());
+    let solutions = board.find_solutions(transforms.as_slice());
 
     if solutions.is_empty() {
         println!("no solution found :(");

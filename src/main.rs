@@ -7,19 +7,6 @@ use crate::pieces::{shape_from_template, Piece};
 mod board;
 mod pieces;
 
-fn print_state(board: &Board) {
-    for row in board.piece_id_grid() {
-        for piece_id in row {
-            if piece_id == -1 {
-                print!("\u{001b}[0m ");
-            } else {
-                print!("\u{001b}[48;5;{}m ", piece_id);
-            }
-        }
-        println!("\u{001b}[0m");
-    }
-}
-
 fn find_solutions<'a>(
     top_level: bool,
     board: &mut Board<'a>,
@@ -30,7 +17,7 @@ fn find_solutions<'a>(
         #[cfg(feature = "trace")]
         {
             println!("Pruning impossible path:");
-            print_state(board);
+            board.print_state();
         }
         return vec![];
     }
@@ -64,7 +51,7 @@ fn find_solutions<'a>(
                 if board.try_add(placement) {
                     if remaining.len() == 1 {
                         println!("Found solution:");
-                        print_state(board);
+                        board.print_state();
                         solutions.push(board.clone());
                     } else {
                         let mut child_solutions = find_solutions(false, board, &remaining[1..]);
@@ -114,7 +101,6 @@ fn main() {
     } else {
         let elapsed = start.elapsed();
         println!("found all solutions in {}ms!", elapsed.as_millis());
-        print_state(&board);
     }
 }
 

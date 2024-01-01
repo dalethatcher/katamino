@@ -130,6 +130,19 @@ impl<'a> Board<'a> {
 
         true
     }
+
+    pub(crate) fn print_state(&self) {
+        for row in self.piece_id_grid() {
+            for piece_id in row {
+                if piece_id == -1 {
+                    print!("\u{001b}[0m ");
+                } else {
+                    print!("\u{001b}[48;5;{}m ", piece_id);
+                }
+            }
+            println!("\u{001b}[0m");
+        }
+    }
 }
 
 #[cfg(test)]

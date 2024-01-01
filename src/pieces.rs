@@ -75,6 +75,7 @@ impl Piece {
         }
     }
 
+    #[cfg(feature = "trace")]
     pub(crate) fn shape_string(&self) -> String {
         let mut result = String::new();
 
@@ -182,6 +183,7 @@ mod tests {
         assert_eq!(vec![true, true, false, true], rotated.shape);
     }
 
+    #[cfg(feature = "trace")]
     #[test]
     fn can_convert_to_shape_string() {
         let input = shape_from_template(123, vec!["*..", "***"]);

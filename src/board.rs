@@ -1,4 +1,5 @@
 use crate::pieces::Piece;
+use std::cell::RefCell;
 
 #[derive(Clone)]
 pub(crate) struct Placement<'a> {
@@ -143,12 +144,70 @@ impl<'a> Board<'a> {
             println!("\u{001b}[0m");
         }
     }
+
+    pub(crate) fn find_solutions(
+        &mut self,
+        top_level: bool,
+        remaining: &'a [Vec<Piece>],
+    ) -> Vec<Board<'a>> {
+        if !self.empty_spaces_multiple_of_five() {
+            #[cfg(feature = "trace")]
+            {
+                println!("Pruning impossible path:");
+                self.print_state();
+            }
+            return vec![];
+        }
+
+        let tracker = if !top_level {
+            None
+        } else {
+            let number_of_possibilities = self.number_of_possibilities(&remaining[0]) as i32;
+            let mut progress = -1i32;
+
+            Some(RefCell::new(move || {
+                progress += 1;
+                println!("{}%", (progress * 100) / number_of_possibilities);
+            }))
+        };
+
+        let mut solutions = vec![];
+        for transform in remaining[0].iter() {
+            for column in 0..(1 + self.width - transform.width) {
+                for row in 0..(1 + self.height - transform.height) {
+                    for v in tracker.iter() {
+                        v.borrow_mut()();
+                    }
+
+                    let placement = Placement {
+                        column,
+                        row,
+                        piece: transform,
+                    };
+
+                    if self.try_add(placement) {
+                        if remaining.len() == 1 {
+                            println!("Found solution:");
+                            self.print_state();
+                            solutions.push(self.clone());
+                        } else {
+                            let mut child_solutions = self.find_solutions(false, &remaining[1..]);
+                            solutions.append(&mut child_solutions);
+                        }
+                        self.remove_last();
+                    }
+                }
+            }
+        }
+
+        solutions
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::board::{create_board, Placement};
-    use crate::pieces::shape_from_template;
+    use crate::pieces::{shape_from_template, Piece};
 
     #[test]
     fn can_add_to_empty_board() {
@@ -327,5 +386,21 @@ mod tests {
                 i
             );
         }
+    }
+
+    #[test]
+    fn can_find_solutions() {
+        let pieces: Vec<Vec<Piece>> = vec![
+            shape_from_template(1, vec!["*.*", "***"]),
+            shape_from_template(2, vec!["*.*", "***"]),
+            shape_from_template(3, vec![".*.", "***", ".*."]),
+        ]
+        .iter()
+        .map(Piece::all_transforms)
+        .collect();
+        let mut board = create_board(5, 3);
+
+        let solutions = board.find_solutions(true, pieces.as_slice());
+        assert_eq!(2, solutions.len());
     }
 }

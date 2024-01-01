@@ -1,70 +1,10 @@
-use std::cell::RefCell;
 use std::time::Instant;
 
-use crate::board::{create_board, Board, Placement};
+use crate::board::create_board;
 use crate::pieces::{shape_from_template, Piece};
 
 mod board;
 mod pieces;
-
-fn find_solutions<'a>(
-    top_level: bool,
-    board: &mut Board<'a>,
-    remaining: &'a [Vec<Piece>],
-) -> Vec<Board<'a>> {
-    // reduces runtime to 1/4-1/8 of previous, but specific for this puzzle
-    if !board.empty_spaces_multiple_of_five() {
-        #[cfg(feature = "trace")]
-        {
-            println!("Pruning impossible path:");
-            board.print_state();
-        }
-        return vec![];
-    }
-
-    let tracker = if !top_level {
-        None
-    } else {
-        let number_of_possibilities = board.number_of_possibilities(&remaining[0]) as i32;
-        let mut progress = -1i32;
-
-        Some(RefCell::new(move || {
-            progress += 1;
-            println!("{}%", (progress * 100) / number_of_possibilities);
-        }))
-    };
-
-    let mut solutions = vec![];
-    for transform in remaining[0].iter() {
-        for column in 0..(1 + board.width - transform.width) {
-            for row in 0..(1 + board.height - transform.height) {
-                for v in tracker.iter() {
-                    v.borrow_mut()();
-                }
-
-                let placement = Placement {
-                    column,
-                    row,
-                    piece: transform,
-                };
-
-                if board.try_add(placement) {
-                    if remaining.len() == 1 {
-                        println!("Found solution:");
-                        board.print_state();
-                        solutions.push(board.clone());
-                    } else {
-                        let mut child_solutions = find_solutions(false, board, &remaining[1..]);
-                        solutions.append(&mut child_solutions);
-                    }
-                    board.remove_last();
-                }
-            }
-        }
-    }
-
-    solutions
-}
 
 fn main() {
     let pieces = vec![
@@ -94,35 +34,12 @@ fn main() {
     let mut board = create_board(12, 5);
 
     let start = Instant::now();
-    let solutions = find_solutions(true, &mut board, transforms.as_slice());
+    let solutions = board.find_solutions(true, transforms.as_slice());
 
     if solutions.is_empty() {
         println!("no solution found :(");
     } else {
         let elapsed = start.elapsed();
         println!("found all solutions in {}ms!", elapsed.as_millis());
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::board::create_board;
-    use crate::find_solutions;
-    use crate::pieces::{shape_from_template, Piece};
-
-    #[test]
-    fn can_place_pieces() {
-        let pieces: Vec<Vec<Piece>> = vec![
-            shape_from_template(1, vec!["*.*", "***"]),
-            shape_from_template(2, vec!["*.*", "***"]),
-            shape_from_template(3, vec![".*.", "***", ".*."]),
-        ]
-        .iter()
-        .map(Piece::all_transforms)
-        .collect();
-        let mut board = create_board(5, 3);
-
-        let solutions = find_solutions(true, &mut board, pieces.as_slice());
-        assert_eq!(2, solutions.len());
     }
 }

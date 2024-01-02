@@ -18,8 +18,8 @@ fn main() {
         shape_from_template(6, vec!["*..", "***", "..*"]),   //  8
         shape_from_template(252, vec!["*..", "***", ".*."]), //  9
         shape_from_template(28, vec!["***", ".*.", ".*."]),  // 10
-        shape_from_template(10, vec!["**.", ".**", "..*"]),  // 11
-        shape_from_template(1, vec![".*.", "***", ".*."]),   // 12
+                                                             // shape_from_template(10, vec!["**.", ".**", "..*"]),  // 11
+                                                             // shape_from_template(1, vec![".*.", "***", ".*."]),   // 12
     ];
 
     #[cfg(feature = "trace")]
@@ -31,15 +31,19 @@ fn main() {
     }
 
     let transforms: Vec<Vec<Piece>> = pieces.iter().map(Piece::all_transforms).collect();
-    let mut board = create_board(12, 5);
+    let mut board = create_board(10, 5);
 
     let start = Instant::now();
     let solutions = board.find_solutions(transforms.as_slice());
+    let elapsed = start.elapsed();
 
     if solutions.is_empty() {
-        println!("no solution found :(");
+        println!("no solution found :( in {} ms", elapsed.as_millis());
     } else {
-        let elapsed = start.elapsed();
-        println!("found all solutions in {}ms!", elapsed.as_millis());
+        println!(
+            "found {} solutions in {}ms!",
+            solutions.len(),
+            elapsed.as_millis()
+        );
     }
 }

@@ -1,21 +1,22 @@
 use crate::pieces::Piece;
+use std::thread;
 
 #[derive(Clone)]
-pub(crate) struct Placement<'a> {
+pub(crate) struct Placement {
     pub(crate) row: u8,
     pub(crate) column: u8,
-    pub(crate) piece: &'a Piece,
+    pub(crate) piece: &'static Piece,
 }
 
 #[derive(Clone)]
-pub(crate) struct Board<'a> {
+pub(crate) struct Board {
     pub(crate) width: u8,
     pub(crate) height: u8,
-    pub(crate) placements: Vec<Placement<'a>>,
+    pub(crate) placements: Vec<Placement>,
     pub(crate) filled: Vec<bool>,
 }
 
-pub(crate) fn create_board<'a>(width: u8, height: u8) -> Board<'a> {
+pub(crate) fn create_board<'a>(width: u8, height: u8) -> Board {
     Board {
         width,
         height,
@@ -24,7 +25,7 @@ pub(crate) fn create_board<'a>(width: u8, height: u8) -> Board<'a> {
     }
 }
 
-impl<'a> Board<'a> {
+impl Board {
     pub(crate) fn empty(&self, row: u8, column: u8) -> bool {
         !self.filled[usize::from(row * self.width + column)]
     }
@@ -39,7 +40,7 @@ impl<'a> Board<'a> {
             }
         }
     }
-    pub(crate) fn try_add(&mut self, placement: Placement<'a>) -> bool {
+    pub(crate) fn try_add(&mut self, placement: Placement) -> bool {
         for piece_row in 0..placement.piece.height {
             for piece_column in 0..placement.piece.width {
                 if placement.piece.is_solid(piece_row, piece_column)
@@ -144,7 +145,7 @@ impl<'a> Board<'a> {
         }
     }
 
-    fn place_remaining_pieces(&mut self, remaining: &'a [Vec<Piece>]) -> Vec<Board<'a>> {
+    fn place_remaining_pieces(&mut self, remaining: &'static [Vec<Piece>]) -> Vec<Board> {
         if !self.empty_spaces_multiple_of_five() {
             #[cfg(feature = "trace")]
             {
@@ -182,7 +183,7 @@ impl<'a> Board<'a> {
         solutions
     }
 
-    pub(crate) fn find_solutions(&mut self, pieces: &'a [Vec<Piece>]) -> Vec<Board<'a>> {
+    pub(crate) fn find_solutions(&mut self, pieces: &'static [Vec<Piece>]) -> Vec<Board> {
         let mut output_progress = {
             let number_of_possibilities = self.number_of_top_level_possibilities(&pieces[0]) as i32;
             let mut progress = -1i32;
@@ -191,13 +192,11 @@ impl<'a> Board<'a> {
                 println!("{}%", (progress * 100) / number_of_possibilities);
             }
         };
-
         let mut solutions = vec![];
+        let mut children = vec![];
         for transform in pieces[0].iter() {
             for column in 0..(1 + (self.width - transform.width) / 2) {
                 for row in 0..(1 + (self.height - transform.height) / 2) {
-                    output_progress();
-
                     let placement = Placement {
                         column,
                         row,
@@ -210,16 +209,26 @@ impl<'a> Board<'a> {
                             self.print_state();
                             solutions.push(self.clone());
                         } else {
-                            let mut child_solutions = self.place_remaining_pieces(&pieces[1..]);
-                            solutions.append(&mut child_solutions);
+                            let mut child_board = self.clone();
+                            let child_handle = thread::spawn(move || {
+                                child_board.place_remaining_pieces(&pieces[1..])
+                            });
+                            children.push(child_handle);
                         }
                         self.remove_last();
                     }
                 }
             }
         }
-        output_progress();
 
+        for handle in children {
+            let result = handle.join().unwrap();
+            output_progress();
+            for solution in result {
+                solutions.push(solution);
+            }
+        }
+        output_progress();
         solutions
     }
 }
@@ -231,11 +240,11 @@ mod tests {
 
     #[test]
     fn can_add_to_empty_board() {
-        let piece = shape_from_template(1, vec!["*.*", "***"]);
+        let piece = Box::leak(Box::new(shape_from_template(1, vec!["*.*", "***"])));
         let placement = Placement {
             row: 0,
             column: 0,
-            piece: &piece,
+            piece,
         };
         let mut board = create_board(5, 2);
 
@@ -244,50 +253,50 @@ mod tests {
 
     #[test]
     fn cannot_add_to_full_board() {
-        let first_piece = shape_from_template(1, vec!["*****"]);
-        let second_piece = shape_from_template(2, vec!["**..", ".***"]);
+        let first_piece = Box::leak(Box::new(shape_from_template(1, vec!["*****"])));
+        let second_piece = Box::leak(Box::new(shape_from_template(2, vec!["**..", ".***"])));
         let mut board = create_board(5, 2);
         board.try_add(Placement {
             row: 0,
             column: 0,
-            piece: &first_piece,
+            piece: first_piece,
         });
 
         assert!(!board.try_add(Placement {
             row: 0,
             column: 0,
-            piece: &second_piece
+            piece: second_piece
         }));
     }
 
     #[test]
     fn can_add_after_removing() {
-        let first_piece = shape_from_template(1, vec!["*****"]);
-        let second_piece = shape_from_template(2, vec!["**..", ".***"]);
+        let first_piece = Box::leak(Box::new(shape_from_template(1, vec!["*****"])));
+        let second_piece = Box::leak(Box::new(shape_from_template(2, vec!["**..", ".***"])));
 
         let mut board = create_board(5, 3);
         board.try_add(Placement {
             row: 0,
             column: 0,
-            piece: &first_piece,
+            piece: first_piece,
         });
         board.remove_last();
 
         assert!(board.try_add(Placement {
             row: 0,
             column: 1,
-            piece: &second_piece
+            piece: second_piece
         }));
     }
 
     #[test]
     fn can_test_for_empty_out_of_bounds() {
-        let piece = shape_from_template(1, vec!["*****"]);
+        let piece = Box::leak(Box::new(shape_from_template(1, vec!["*****"])));
         let mut board = create_board(5, 2);
         board.try_add(Placement {
             row: 0,
             column: 0,
-            piece: &piece,
+            piece,
         });
 
         assert!(!board.empty(0, 0));
@@ -296,12 +305,12 @@ mod tests {
 
     #[test]
     fn can_test_for_empty_inside_bounds() {
-        let piece = shape_from_template(1, vec!["**..", ".***"]);
+        let piece = Box::leak(Box::new(shape_from_template(1, vec!["**..", ".***"])));
         let mut board = create_board(4, 2);
         board.try_add(Placement {
             row: 0,
             column: 0,
-            piece: &piece,
+            piece,
         });
 
         assert!(!board.empty(0, 0));
@@ -310,18 +319,18 @@ mod tests {
 
     #[test]
     fn generates_expected_shape_id_grid() {
-        let first_piece = shape_from_template(100, vec!["*****"]);
-        let second_piece = shape_from_template(200, vec!["*****"]);
+        let first_piece = Box::leak(Box::new(shape_from_template(100, vec!["*****"])));
+        let second_piece = Box::leak(Box::new(shape_from_template(200, vec!["*****"])));
         let mut board = create_board(5, 2);
         board.try_add(Placement {
             row: 0,
             column: 0,
-            piece: &first_piece,
+            piece: first_piece,
         });
         board.try_add(Placement {
             row: 1,
             column: 0,
-            piece: &second_piece,
+            piece: second_piece,
         });
         let shape_id_grid = board.piece_id_grid();
 
@@ -342,12 +351,12 @@ mod tests {
 
     #[test]
     fn can_check_empty_space_is_multiple_of_five() {
-        let piece = shape_from_template(0, vec!["*****"]);
+        let piece = Box::leak(Box::new(shape_from_template(0, vec!["*****"])));
         let mut board = create_board(12, 5);
         board.try_add(Placement {
             row: 0,
             column: 0,
-            piece: &piece,
+            piece: piece,
         });
 
         assert!(board.empty_spaces_multiple_of_five());
@@ -368,7 +377,8 @@ mod tests {
             shape_from_template(28, vec!["*..", "***", "*.."]),  // 10
             shape_from_template(10, vec!["..*", ".**", "**."]),  // 11
             shape_from_template(1, vec![".*.", "***", ".*."]),   // 12
-        ];
+        ]
+        .leak();
         let placements: Vec<Placement> = vec![
             (0, 0), //  1
             (3, 0), //  2
@@ -388,7 +398,7 @@ mod tests {
         .map(|((r, c), piece)| Placement {
             row: *r,
             column: *c,
-            piece: piece,
+            piece,
         })
         .collect();
 
@@ -409,7 +419,7 @@ mod tests {
 
     #[test]
     fn can_find_unique_solutions() {
-        let pieces: Vec<Vec<Piece>> = vec![
+        let pieces: &'static [Vec<Piece>] = vec![
             shape_from_template(1, vec!["*.*", "***"]),
             shape_from_template(2, vec!["*.*", "***"]),
             shape_from_template(3, vec![".*.", "***", ".*."]),
@@ -417,10 +427,11 @@ mod tests {
         ]
         .iter()
         .map(Piece::all_transforms)
-        .collect();
+        .collect::<Vec<_>>()
+        .leak();
         let mut board = create_board(5, 4);
 
-        let solutions = board.find_solutions(pieces.as_slice());
+        let solutions = board.find_solutions(pieces);
         assert_eq!(1, solutions.len());
     }
 }

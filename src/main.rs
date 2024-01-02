@@ -31,10 +31,12 @@ fn main() {
     }
 
     let transforms: Vec<Vec<Piece>> = pieces.iter().map(Piece::all_transforms).collect();
+    // keep computed transforms around for the rest of the program
+    let transforms_ref: &mut [Vec<Piece>] = transforms.leak();
     let mut board = create_board(10, 5);
 
     let start = Instant::now();
-    let solutions = board.find_solutions(transforms.as_slice());
+    let solutions = board.find_solutions(transforms_ref);
     let elapsed = start.elapsed();
 
     if solutions.is_empty() {

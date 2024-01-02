@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::time::Instant;
 
 use crate::board::create_board;
@@ -30,11 +31,12 @@ fn main() {
         }
     }
 
-    let transforms: Vec<Vec<Piece>> = pieces.iter().map(Piece::all_transforms).collect();
+    let transforms: Arc<Vec<Vec<Piece>>> =
+        Arc::new(pieces.iter().map(Piece::all_transforms).collect());
     let mut board = create_board(10, 5);
 
     let start = Instant::now();
-    let solutions = board.find_solutions(transforms.as_slice());
+    let solutions = board.find_solutions(&transforms);
     let elapsed = start.elapsed();
 
     if solutions.is_empty() {

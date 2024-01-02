@@ -1,4 +1,6 @@
 use crate::pieces::Piece;
+use std::sync::Arc;
+use std::thread;
 
 #[derive(Clone)]
 pub(crate) struct Placement<'a> {
@@ -144,7 +146,7 @@ impl<'a> Board<'a> {
         }
     }
 
-    fn place_remaining_pieces(&mut self, remaining: &'a [Vec<Piece>]) -> Vec<Board<'a>> {
+    fn place_remaining_pieces(&mut self, remaining: &'a [Vec<Piece>]) -> Vec<Vec<Vec<i32>>> {
         if !self.empty_spaces_multiple_of_five() {
             #[cfg(feature = "trace")]
             {
@@ -168,7 +170,7 @@ impl<'a> Board<'a> {
                         if remaining.len() == 1 {
                             println!("Found solution:");
                             self.print_state();
-                            solutions.push(self.clone());
+                            solutions.push(self.piece_id_grid());
                         } else {
                             let mut child_solutions = self.place_remaining_pieces(&remaining[1..]);
                             solutions.append(&mut child_solutions);
@@ -182,22 +184,24 @@ impl<'a> Board<'a> {
         solutions
     }
 
-    pub(crate) fn find_solutions(&mut self, pieces: &'a [Vec<Piece>]) -> Vec<Board<'a>> {
+    pub(crate) fn find_solutions(
+        &mut self,
+        transforms: &'a Arc<Vec<Vec<Piece>>>,
+    ) -> Vec<Vec<Vec<i32>>> {
         let mut output_progress = {
-            let number_of_possibilities = self.number_of_top_level_possibilities(&pieces[0]) as i32;
+            let number_of_possibilities =
+                self.number_of_top_level_possibilities(&transforms[0]) as i32;
             let mut progress = -1i32;
             move || {
                 progress += 1;
                 println!("{}%", (progress * 100) / number_of_possibilities);
             }
         };
-
         let mut solutions = vec![];
-        for transform in pieces[0].iter() {
+        let mut children = vec![];
+        for (transform_index, transform) in transforms[0].iter().enumerate() {
             for column in 0..(1 + (self.width - transform.width) / 2) {
                 for row in 0..(1 + (self.height - transform.height) / 2) {
-                    output_progress();
-
                     let placement = Placement {
                         column,
                         row,
@@ -205,21 +209,42 @@ impl<'a> Board<'a> {
                     };
 
                     if self.try_add(placement) {
-                        if pieces.len() == 1 {
+                        if transforms.len() == 1 {
                             println!("Found solution:");
                             self.print_state();
-                            solutions.push(self.clone());
+                            solutions.push(self.piece_id_grid());
                         } else {
-                            let mut child_solutions = self.place_remaining_pieces(&pieces[1..]);
-                            solutions.append(&mut child_solutions);
+                            let child_board_width = self.width;
+                            let child_board_height = self.height;
+                            let child_pieces = Arc::clone(&transforms);
+
+                            let child_handle = thread::spawn(move || {
+                                let child_placement = Placement {
+                                    row,
+                                    column,
+                                    piece: &child_pieces[0][transform_index],
+                                };
+                                let mut child_board =
+                                    create_board(child_board_width, child_board_height);
+                                child_board.try_add(child_placement);
+
+                                child_board.place_remaining_pieces(&child_pieces[1..])
+                            });
+                            children.push(child_handle);
                         }
                         self.remove_last();
                     }
                 }
             }
         }
-        output_progress();
 
+        for handle in children {
+            let result = handle.join().unwrap();
+            output_progress();
+
+            solutions.extend_from_slice(&result);
+        }
+        output_progress();
         solutions
     }
 }
@@ -228,6 +253,7 @@ impl<'a> Board<'a> {
 mod tests {
     use crate::board::{create_board, Placement};
     use crate::pieces::{shape_from_template, Piece};
+    use std::sync::Arc;
 
     #[test]
     fn can_add_to_empty_board() {
@@ -418,9 +444,10 @@ mod tests {
         .iter()
         .map(Piece::all_transforms)
         .collect();
+        let pieces = Arc::new(pieces);
         let mut board = create_board(5, 4);
 
-        let solutions = board.find_solutions(pieces.as_slice());
+        let solutions = board.find_solutions(&pieces);
         assert_eq!(1, solutions.len());
     }
 }

@@ -2,25 +2,25 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use crate::board::create_board;
-use crate::pieces::{shape_from_template, Piece};
+use crate::pieces::{piece_from_name, PentominoName, Piece};
 
 mod board;
 mod pieces;
 
 fn main() {
     let pieces = vec![
-        shape_from_template(94, vec!["*****"]),              //  1
-        shape_from_template(208, vec!["*...", "****"]),      //  2
-        shape_from_template(130, vec![".*..", "****"]),      //  3
-        shape_from_template(127, vec!["**..", ".***"]),      //  4
-        shape_from_template(4, vec!["*..", "*..", "***"]),   //  5
-        shape_from_template(217, vec!["***", "**."]),        //  6
-        shape_from_template(11, vec!["*.*", "***"]),         //  7
-        shape_from_template(6, vec!["*..", "***", "..*"]),   //  8
-        shape_from_template(252, vec!["*..", "***", ".*."]), //  9
-        shape_from_template(28, vec!["***", ".*.", ".*."]),  // 10
-                                                             // shape_from_template(10, vec!["**.", ".**", "..*"]),  // 11
-                                                             // shape_from_template(1, vec![".*.", "***", ".*."]),   // 12
+        piece_from_name(94, PentominoName::I),  //  1
+        piece_from_name(208, PentominoName::L), //  2
+        piece_from_name(130, PentominoName::Y), //  3
+        piece_from_name(127, PentominoName::N), //  4
+        piece_from_name(4, PentominoName::V),   //  5
+        piece_from_name(217, PentominoName::P), //  6
+        piece_from_name(11, PentominoName::U),  //  7
+        piece_from_name(6, PentominoName::Z),   //  8
+        piece_from_name(252, PentominoName::F), //  9
+        piece_from_name(28, PentominoName::T),  // 10
+        piece_from_name(10, PentominoName::W),  // 11
+        piece_from_name(1, PentominoName::X),   // 12
     ];
 
     #[cfg(feature = "trace")]
@@ -33,7 +33,7 @@ fn main() {
 
     let transforms: Arc<Vec<Vec<Piece>>> =
         Arc::new(pieces.iter().map(Piece::all_transforms).collect());
-    let mut board = create_board(10, 5);
+    let mut board = create_board(12, 5);
 
     let start = Instant::now();
     let solutions = board.find_solutions(&transforms);

@@ -3,12 +3,59 @@ use std::collections::HashSet;
 #[derive(Clone, PartialEq)]
 pub(crate) struct Piece {
     pub(crate) id: i32,
+    pub(crate) name: PentominoName,
     pub(crate) height: u8,
     pub(crate) width: u8,
     pub(crate) shape: Vec<bool>,
 }
 
-pub(crate) fn shape_from_template(id: i32, template: Vec<&str>) -> Piece {
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub(crate) enum PentominoName {
+    F,
+    I,
+    L,
+    N,
+    P,
+    T,
+    U,
+    V,
+    W,
+    X,
+    Y,
+    Z,
+}
+
+impl PentominoName {
+    pub fn name_char(&self) -> char {
+        use std::fmt::Write;
+
+        let mut output = String::new();
+
+        write!(&mut output, "{:?}", self).expect("Unexpected error while trying to write string");
+
+        output.chars().next().unwrap()
+    }
+}
+pub(crate) fn piece_from_name(id: i32, name: PentominoName) -> Piece {
+    let template = match &name {
+        PentominoName::F => vec!["*..", "***", ".*."],
+        PentominoName::I => vec!["*****"],
+        PentominoName::L => vec!["*...", "****"],
+        PentominoName::N => vec!["**..", ".***"],
+        PentominoName::P => vec!["***", "**."],
+        PentominoName::T => vec!["***", ".*.", ".*."],
+        PentominoName::U => vec!["*.*", "***"],
+        PentominoName::V => vec!["*..", "*..", "***"],
+        PentominoName::W => vec!["**.", ".**", "..*"],
+        PentominoName::X => vec![".*.", "***", ".*."],
+        PentominoName::Y => vec![".*..", "****"],
+        PentominoName::Z => vec!["*..", "***", "..*"],
+    };
+
+    piece_from_template(id, name, template)
+}
+
+fn piece_from_template(id: i32, name: PentominoName, template: Vec<&str>) -> Piece {
     let mut height: u8 = 0;
     let mut width: u8 = 0;
     let mut shape: Vec<bool> = Vec::new();
@@ -34,13 +81,15 @@ pub(crate) fn shape_from_template(id: i32, template: Vec<&str>) -> Piece {
     let square_count = shape.iter().filter(|s| **s).count();
     if square_count != 5 {
         panic!(
-            "expected five squares but got {} for piece id {}",
-            square_count, id
+            "expected five squares but got {} for piece name {}",
+            square_count,
+            name.name_char()
         );
     }
 
     Piece {
         id,
+        name,
         height,
         width,
         shape,
@@ -98,16 +147,13 @@ impl Piece {
     }
 
     fn shape_id(&self) -> (u32, u8, u8) {
-        let mut result: u32 = 0;
-
-        for i in (0..self.shape.len()).rev() {
-            result <<= 1;
-            if self.shape[i] {
-                result += 1;
-            }
-        }
-
-        (result, self.width, self.height)
+        (
+            self.shape
+                .iter()
+                .fold(0u32, |acc, f| (acc << 1) + if *f { 1 } else { 0 }),
+            self.width,
+            self.height,
+        )
     }
 
     pub(crate) fn all_transforms(&self) -> Vec<Piece> {
@@ -145,11 +191,11 @@ impl Piece {
 
 #[cfg(test)]
 mod tests {
-    use crate::pieces::shape_from_template;
+    use crate::pieces::{piece_from_name, PentominoName};
 
     #[test]
     fn can_create_shape_from_template() {
-        let piece = shape_from_template(123, vec!["*.*", "***"]);
+        let piece = piece_from_name(123, PentominoName::U);
 
         assert_eq!(2, piece.height);
         assert_eq!(3, piece.width);
@@ -158,7 +204,7 @@ mod tests {
 
     #[test]
     fn can_flip_piece_horizontally() {
-        let input = shape_from_template(123, vec!["**..", ".***"]);
+        let input = piece_from_name(123, PentominoName::N);
 
         let flipped = input.flip_horizontaly();
 
@@ -173,7 +219,7 @@ mod tests {
 
     #[test]
     fn can_rotate_3x2_clockwise() {
-        let input = shape_from_template(123, vec!["*.*", "***"]);
+        let input = piece_from_name(123, PentominoName::U);
 
         let rotated = input.rotate_clockwise();
 
@@ -186,21 +232,21 @@ mod tests {
     #[cfg(feature = "trace")]
     #[test]
     fn can_convert_to_shape_string() {
-        let input = shape_from_template(123, vec!["*..", "***"]);
+        let input = piece_from_name(123, PentominoName::L);
 
         assert_eq!("█  \n███", input.shape_string());
     }
 
     #[test]
     fn can_calculate_shape_id() {
-        let input = shape_from_template(123, vec!["**", ".*", "**"]);
+        let input = piece_from_name(123, PentominoName::U);
 
-        assert_eq!((0x3b, 2, 3), input.shape_id())
+        assert_eq!((0x2f, 3, 2), input.shape_id())
     }
 
     #[test]
     fn can_generate_all_transforms_for_1d() {
-        let input = shape_from_template(123, vec!["*****"]);
+        let input = piece_from_name(123, PentominoName::I);
         let rotated_input = input.rotate_clockwise();
 
         let transforms = input.all_transforms();
@@ -211,7 +257,7 @@ mod tests {
 
     #[test]
     fn can_generate_all_transforms_for_2d() {
-        let input = shape_from_template(123, vec!["*..", "***", ".*."]);
+        let input = piece_from_name(123, PentominoName::F);
         let transforms = input.all_transforms();
 
         assert_eq!(8, transforms.len());
@@ -219,11 +265,16 @@ mod tests {
 
     #[test]
     fn can_test_solidity() {
-        let input = shape_from_template(123, vec!["***", ".**"]);
+        let input = piece_from_name(123, PentominoName::P);
 
         assert!(input.is_solid(0, 0));
-        assert!(input.is_solid(0, 1));
-        assert!(!input.is_solid(1, 0));
-        assert!(input.is_solid(1, 1));
+        assert!(input.is_solid(0, 2));
+        assert!(input.is_solid(1, 0));
+        assert!(!input.is_solid(1, 2));
+    }
+
+    #[test]
+    fn get_expected_char_for_name() {
+        assert_eq!('F', PentominoName::F.name_char());
     }
 }

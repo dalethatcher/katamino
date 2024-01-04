@@ -146,7 +146,15 @@ impl<'a> Board<'a> {
         }
     }
 
-    fn place_remaining_pieces(&mut self, remaining: &'a [Vec<Piece>]) -> Vec<Vec<Vec<i32>>> {
+    fn found_solution(&self) -> String {
+        let name_grid = self.name_grid();
+        println!("Found solution: {}", name_grid);
+        self.print_state();
+
+        name_grid
+    }
+
+    fn place_remaining_pieces(&mut self, remaining: &'a [Vec<Piece>]) -> Vec<String> {
         if !self.empty_spaces_multiple_of_five() {
             #[cfg(feature = "trace")]
             {
@@ -168,9 +176,7 @@ impl<'a> Board<'a> {
 
                     if self.try_add(placement) {
                         if remaining.len() == 1 {
-                            println!("Found solution:");
-                            self.print_state();
-                            solutions.push(self.piece_id_grid());
+                            solutions.push(self.found_solution());
                         } else {
                             let mut child_solutions = self.place_remaining_pieces(&remaining[1..]);
                             solutions.append(&mut child_solutions);
@@ -184,10 +190,7 @@ impl<'a> Board<'a> {
         solutions
     }
 
-    pub(crate) fn find_solutions(
-        &mut self,
-        transforms: &'a Arc<Vec<Vec<Piece>>>,
-    ) -> Vec<Vec<Vec<i32>>> {
+    pub(crate) fn find_solutions(&mut self, transforms: &'a Arc<Vec<Vec<Piece>>>) -> Vec<String> {
         let mut output_progress = {
             let number_of_possibilities =
                 self.number_of_top_level_possibilities(&transforms[0]) as i32;
@@ -210,13 +213,11 @@ impl<'a> Board<'a> {
 
                     if self.try_add(placement) {
                         if transforms.len() == 1 {
-                            println!("Found solution:");
-                            self.print_state();
-                            solutions.push(self.piece_id_grid());
+                            solutions.push(self.found_solution());
                         } else {
                             let child_board_width = self.width;
                             let child_board_height = self.height;
-                            let child_pieces = Arc::clone(&transforms);
+                            let child_pieces = Arc::clone(transforms);
 
                             let child_handle = thread::spawn(move || {
                                 let child_placement = Placement {
@@ -247,17 +248,38 @@ impl<'a> Board<'a> {
         output_progress();
         solutions
     }
+
+    pub(crate) fn name_grid(&self) -> String {
+        let mut buffer = vec![vec!['.'; self.width as usize]; self.height as usize];
+
+        for placement in self.placements.iter() {
+            let piece_name = placement.piece.name.name_char();
+
+            for piece_row in 0..placement.piece.height {
+                for piece_column in 0..placement.piece.width {
+                    if placement.piece.is_solid(piece_row, piece_column) {
+                        buffer[(placement.row + piece_row) as usize]
+                            [(placement.column + piece_column) as usize] = piece_name
+                    }
+                }
+            }
+        }
+
+        let rows: Vec<String> = buffer.into_iter().map(|c| c.iter().collect()).collect();
+
+        rows.join(" ")
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::board::{create_board, Placement};
-    use crate::pieces::{shape_from_template, Piece};
+    use crate::pieces::{piece_from_name, PentominoName, Piece};
     use std::sync::Arc;
 
     #[test]
     fn can_add_to_empty_board() {
-        let piece = shape_from_template(1, vec!["*.*", "***"]);
+        let piece = piece_from_name(1, PentominoName::U);
         let placement = Placement {
             row: 0,
             column: 0,
@@ -270,8 +292,8 @@ mod tests {
 
     #[test]
     fn cannot_add_to_full_board() {
-        let first_piece = shape_from_template(1, vec!["*****"]);
-        let second_piece = shape_from_template(2, vec!["**..", ".***"]);
+        let first_piece = piece_from_name(1, PentominoName::I);
+        let second_piece = piece_from_name(2, PentominoName::N);
         let mut board = create_board(5, 2);
         board.try_add(Placement {
             row: 0,
@@ -288,8 +310,8 @@ mod tests {
 
     #[test]
     fn can_add_after_removing() {
-        let first_piece = shape_from_template(1, vec!["*****"]);
-        let second_piece = shape_from_template(2, vec!["**..", ".***"]);
+        let first_piece = piece_from_name(1, PentominoName::I);
+        let second_piece = piece_from_name(2, PentominoName::N);
 
         let mut board = create_board(5, 3);
         board.try_add(Placement {
@@ -308,7 +330,7 @@ mod tests {
 
     #[test]
     fn can_test_for_empty_out_of_bounds() {
-        let piece = shape_from_template(1, vec!["*****"]);
+        let piece = piece_from_name(1, PentominoName::I);
         let mut board = create_board(5, 2);
         board.try_add(Placement {
             row: 0,
@@ -322,7 +344,7 @@ mod tests {
 
     #[test]
     fn can_test_for_empty_inside_bounds() {
-        let piece = shape_from_template(1, vec!["**..", ".***"]);
+        let piece = piece_from_name(1, PentominoName::N);
         let mut board = create_board(4, 2);
         board.try_add(Placement {
             row: 0,
@@ -336,8 +358,8 @@ mod tests {
 
     #[test]
     fn generates_expected_shape_id_grid() {
-        let first_piece = shape_from_template(100, vec!["*****"]);
-        let second_piece = shape_from_template(200, vec!["*****"]);
+        let first_piece = piece_from_name(100, PentominoName::I);
+        let second_piece = piece_from_name(200, PentominoName::I);
         let mut board = create_board(5, 2);
         board.try_add(Placement {
             row: 0,
@@ -359,7 +381,7 @@ mod tests {
 
     #[test]
     fn can_calculate_the_number_of_top_level_possibilities() {
-        let piece = shape_from_template(0, vec!["*****"]);
+        let piece = piece_from_name(0, PentominoName::I);
         let transforms = piece.all_transforms();
         let board = create_board(12, 5);
 
@@ -368,7 +390,7 @@ mod tests {
 
     #[test]
     fn can_check_empty_space_is_multiple_of_five() {
-        let piece = shape_from_template(0, vec!["*****"]);
+        let piece = piece_from_name(0, PentominoName::I);
         let mut board = create_board(12, 5);
         board.try_add(Placement {
             row: 0,
@@ -382,18 +404,28 @@ mod tests {
     #[test]
     fn calculates_empty_space_correctly_for_known_good_solution() {
         let pieces = vec![
-            shape_from_template(94, vec!["*****"]),              //  1
-            shape_from_template(208, vec!["*...", "****"]),      //  2
-            shape_from_template(130, vec![".*..", "****"]),      //  3
-            shape_from_template(127, vec!["**..", ".***"]),      //  4
-            shape_from_template(4, vec!["***", "..*", "..*"]),   //  5
-            shape_from_template(217, vec!["***", "**."]),        //  6
-            shape_from_template(11, vec!["***", "*.*"]),         //  7
-            shape_from_template(6, vec!["**.", ".*.", ".**"]),   //  8
-            shape_from_template(252, vec![".*.", "**.", ".**"]), //  9
-            shape_from_template(28, vec!["*..", "***", "*.."]),  // 10
-            shape_from_template(10, vec!["..*", ".**", "**."]),  // 11
-            shape_from_template(1, vec![".*.", "***", ".*."]),   // 12
+            piece_from_name(94, PentominoName::I),  //  1
+            piece_from_name(208, PentominoName::L), //  2
+            piece_from_name(130, PentominoName::Y), //  3
+            piece_from_name(127, PentominoName::N), //  4
+            piece_from_name(4, PentominoName::V)
+                .rotate_clockwise()
+                .rotate_clockwise(), //  5 vec!["***", "..*", "..*"]
+            piece_from_name(217, PentominoName::P), //  6
+            piece_from_name(11, PentominoName::U)
+                .rotate_clockwise()
+                .rotate_clockwise(), //  7 vec!["***", "*.*"]
+            piece_from_name(6, PentominoName::Z)
+                .flip_horizontaly()
+                .rotate_clockwise(), //  8 vec!["**.", ".*.", ".**"]
+            piece_from_name(252, PentominoName::F)
+                .flip_horizontaly()
+                .rotate_clockwise(), //  9 vec![".*.", "**.", ".**"]
+            piece_from_name(28, PentominoName::T)
+                .rotate_clockwise()
+                .flip_horizontaly(), // 10 vec!["*..", "***", "*.."]
+            piece_from_name(10, PentominoName::W).rotate_clockwise(), // 11 vec!["..*", ".**", "**."]
+            piece_from_name(1, PentominoName::X),                     // 12
         ];
         let placements: Vec<Placement> = vec![
             (0, 0), //  1
@@ -436,10 +468,10 @@ mod tests {
     #[test]
     fn can_find_unique_solutions() {
         let pieces: Vec<Vec<Piece>> = vec![
-            shape_from_template(1, vec!["*.*", "***"]),
-            shape_from_template(2, vec!["*.*", "***"]),
-            shape_from_template(3, vec![".*.", "***", ".*."]),
-            shape_from_template(4, vec!["*****"]),
+            piece_from_name(1, PentominoName::U),
+            piece_from_name(2, PentominoName::U),
+            piece_from_name(3, PentominoName::X),
+            piece_from_name(4, PentominoName::I),
         ]
         .iter()
         .map(Piece::all_transforms)
@@ -449,5 +481,24 @@ mod tests {
 
         let solutions = board.find_solutions(&pieces);
         assert_eq!(1, solutions.len());
+    }
+
+    #[test]
+    fn generates_expected_name_grid() {
+        let u_piece = piece_from_name(1, PentominoName::U);
+        let x_piece = piece_from_name(2, PentominoName::X);
+        let mut board = create_board(3, 4);
+
+        assert!(board.try_add(Placement {
+            row: 2,
+            column: 0,
+            piece: &u_piece,
+        }));
+        assert!(board.try_add(Placement {
+            row: 0,
+            column: 0,
+            piece: &x_piece,
+        }));
+        assert_eq!(".X. XXX UXU UUU", board.name_grid());
     }
 }

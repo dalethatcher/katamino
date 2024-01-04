@@ -1,3 +1,5 @@
+use std::collections::hash_map::Entry::{Occupied, Vacant};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -6,6 +8,50 @@ use crate::pieces::{piece_from_name, PentominoName, Piece};
 
 mod board;
 mod pieces;
+
+fn canonicalise_solution_string(solution: &str) -> String {
+    fn flip_horizontally(solution: &[String]) -> Vec<String> {
+        solution.iter().map(|s| s.chars().rev().collect()).collect()
+    }
+
+    fn rotations(solution: &[String]) -> Vec<Vec<String>> {
+        // currently only does a 180 flip as focusing on rectangle cases
+        vec![solution
+            .iter()
+            .map(|s| s.chars().rev().collect())
+            .rev()
+            .collect()]
+    }
+
+    fn less_than(lhs: &[String], rhs: &[String]) -> bool {
+        let l = lhs.iter().next().unwrap();
+        let r = rhs.iter().next().unwrap();
+
+        l < r
+    }
+
+    let input_solution: Vec<String> = solution.split_whitespace().map(|s| s.to_string()).collect();
+    let input_rotations = rotations(&input_solution);
+    let flipped_solution = flip_horizontally(&input_solution);
+    let flipped_rotations = rotations(&flipped_solution);
+
+    let mut minimum = &input_solution;
+    for solution in input_rotations.iter() {
+        if less_than(solution, minimum) {
+            minimum = solution;
+        }
+    }
+    if less_than(&flipped_solution, minimum) {
+        minimum = &flipped_solution
+    }
+    for solution in flipped_rotations.iter() {
+        if less_than(solution, minimum) {
+            minimum = solution
+        }
+    }
+
+    minimum.join(" ")
+}
 
 fn main() {
     let pieces = vec![
@@ -42,10 +88,43 @@ fn main() {
     if solutions.is_empty() {
         println!("no solution found :( in {} ms", elapsed.as_millis());
     } else {
+        let mut found = HashMap::new();
+        for solution in solutions.iter() {
+            let canonical_solution = canonicalise_solution_string(solution);
+
+            match found.entry(canonical_solution) {
+                Vacant(v) => {
+                    v.insert(solution);
+                }
+                Occupied(o) => {
+                    println!(
+                        "discarding duplicate solution: {} duplicate of {}",
+                        solution,
+                        o.get()
+                    );
+                }
+            }
+        }
+
         println!(
-            "found {} solutions in {}ms!",
+            "found {} solutions with {} unique ones in {}ms!",
             solutions.len(),
+            found.len(),
             elapsed.as_millis()
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::canonicalise_solution_string;
+
+    #[test]
+    fn generates_expected_canonical_string() {
+        assert_eq!("AB CD", canonicalise_solution_string("AB CD"));
+        assert_eq!("AB CD", canonicalise_solution_string("BA DC"));
+        assert_eq!("AB CD", canonicalise_solution_string("DC BA"));
+        assert_eq!("AB CD", canonicalise_solution_string("CD AB"));
+        assert_eq!("ABC ADE", canonicalise_solution_string("ADE ABC"));
     }
 }

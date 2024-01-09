@@ -294,6 +294,22 @@ impl<'a> Board<'a> {
 
         result
     }
+
+    fn all_placement_bits(&self, piece: &Piece) -> Vec<u64> {
+        let mut result = vec![];
+
+        for piece in piece.all_transforms().iter() {
+            if piece.height <= self.height && piece.width <= self.width {
+                for row in 0..=(self.height - piece.height) {
+                    for column in 0..=(self.width - piece.width) {
+                        result.push(self.placement_to_bits(&Placement { row, column, piece }))
+                    }
+                }
+            }
+        }
+
+        result
+    }
 }
 
 #[cfg(test)]
@@ -538,5 +554,23 @@ mod tests {
         };
 
         assert_eq!(0x500700000000u64, board.placement_to_bits(&placement));
+    }
+
+    #[test]
+    fn generates_all_possible_placement_bits_for_x() {
+        let piece = piece_from_name(1, PentominoName::X);
+        let board = create_board(5, 4);
+        let expectation = vec![0x47100u64, 0x23880, 0x11c40, 0x2388, 0x11c4, 0x8e2];
+
+        assert_eq!(expectation, board.all_placement_bits(&piece));
+    }
+
+    #[test]
+    fn generates_all_possible_placement_bits_for_l() {
+        let piece = piece_from_name(1, PentominoName::L);
+        let board = create_board(4, 2);
+        let expectation = vec![0x8fu64, 0xf1, 0x1f, 0xf8];
+
+        assert_eq!(expectation, board.all_placement_bits(&piece));
     }
 }

@@ -269,6 +269,31 @@ impl<'a> Board<'a> {
 
         rows.join(" ")
     }
+
+    fn placement_to_bits(&self, placement: &Placement) -> u64 {
+        let piece_max_row = placement.row + placement.piece.height - 1;
+        let piece_max_column = placement.column + placement.piece.width - 1;
+        let mut result = 0u64;
+
+        for row in 0..self.height {
+            for column in 0..self.width {
+                result <<= 1;
+
+                if row >= placement.row
+                    && row <= piece_max_row
+                    && column >= placement.column
+                    && column <= piece_max_column
+                    && placement
+                        .piece
+                        .is_solid(row - placement.row, column - placement.column)
+                {
+                    result += 1;
+                }
+            }
+        }
+
+        result
+    }
 }
 
 #[cfg(test)]
@@ -500,5 +525,18 @@ mod tests {
             piece: &x_piece,
         }));
         assert_eq!(".X. XXX UXU UUU", board.name_grid());
+    }
+
+    #[test]
+    fn generates_expected_placement_bits() {
+        let piece = piece_from_name(1, PentominoName::U);
+        let board = create_board(12, 5);
+        let placement = Placement {
+            row: 1,
+            column: 1,
+            piece: &piece,
+        };
+
+        assert_eq!(0x500700000000u64, board.placement_to_bits(&placement));
     }
 }

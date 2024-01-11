@@ -270,6 +270,7 @@ impl<'a> Board<'a> {
         rows.join(" ")
     }
 
+    #[cfg(feature = "bitmask")]
     fn placement_to_bits(&self, placement: &Placement) -> u64 {
         let piece_max_row = placement.row + placement.piece.height - 1;
         let piece_max_column = placement.column + placement.piece.width - 1;
@@ -295,6 +296,7 @@ impl<'a> Board<'a> {
         result
     }
 
+    #[cfg(feature = "bitmask")]
     fn all_placement_bits(&self, piece: &Piece) -> Vec<u64> {
         let mut result = vec![];
 
@@ -543,6 +545,7 @@ mod tests {
         assert_eq!(".X. XXX UXU UUU", board.name_grid());
     }
 
+    #[cfg(feature = "bitmask")]
     #[test]
     fn generates_expected_placement_bits() {
         let piece = piece_from_name(1, PentominoName::U);
@@ -556,6 +559,7 @@ mod tests {
         assert_eq!(0x500700000000u64, board.placement_to_bits(&placement));
     }
 
+    #[cfg(feature = "bitmask")]
     #[test]
     fn generates_all_possible_placement_bits_for_x() {
         let piece = piece_from_name(1, PentominoName::X);
@@ -565,6 +569,7 @@ mod tests {
         assert_eq!(expectation, board.all_placement_bits(&piece));
     }
 
+    #[cfg(feature = "bitmask")]
     #[test]
     fn generates_all_possible_placement_bits_for_l() {
         let piece = piece_from_name(1, PentominoName::L);
